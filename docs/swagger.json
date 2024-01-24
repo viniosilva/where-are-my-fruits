@@ -1,0 +1,62 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "contact": {}
+    },
+    "paths": {
+        "/healthcheck": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "healthcheck",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/presenter.HealthCheckResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/presenter.HealthCheckResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "presenter.HealthCheckResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/presenter.HealthCheckStatus"
+                        }
+                    ],
+                    "example": "down"
+                }
+            }
+        },
+        "presenter.HealthCheckStatus": {
+            "type": "string",
+            "enum": [
+                "up",
+                "down"
+            ],
+            "x-enum-varnames": [
+                "HealthCheckStatusUp",
+                "HealthCheckStatusDown"
+            ]
+        }
+    }
+}

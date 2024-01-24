@@ -1,0 +1,38 @@
+definitions:
+  presenter.HealthCheckResponse:
+    properties:
+      status:
+        allOf:
+        - $ref: '#/definitions/presenter.HealthCheckStatus'
+        example: down
+    type: object
+  presenter.HealthCheckStatus:
+    enum:
+    - up
+    - down
+    type: string
+    x-enum-varnames:
+    - HealthCheckStatusUp
+    - HealthCheckStatusDown
+info:
+  contact: {}
+paths:
+  /healthcheck:
+    get:
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/presenter.HealthCheckResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/presenter.HealthCheckResponse'
+      summary: healthcheck
+      tags:
+      - health
+swagger: "2.0"

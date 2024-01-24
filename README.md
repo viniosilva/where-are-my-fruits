@@ -14,6 +14,7 @@ Para executar a API é necessário instalar as seguintes ferramentas:
 - [swaggo](https://github.com/swaggo/swag)
 - [docker](https://www.docker.com/)
 - [docker-compose](https://docs.docker.com/compose/)
+- [gnu make](https://www.gnu.org/software/make/manual/make.html)
 
 ## Construído com
 
@@ -22,13 +23,13 @@ Para executar a API é necessário instalar as seguintes ferramentas:
 - [mysql](https://www.mysql.com)
 - [swagger](https://swagger.io)
 
-## Instalação
+## Instalando
 
 ```bash
 $ go get
 ```
 
-## Configuração
+## Configurando
 
 - Copie o arquivo `.env.example` para `.env`
 
@@ -47,21 +48,36 @@ $ make migrate
 $ make run
 ```
 
-É possível acessar a documentação local das rotas no [swagger](http:localhost:8080/api/swagger/index.html)
+É possível acessar a documentação local das rotas no [swagger](http://localhost:3001/api/swagger/index.html)
 
----
-
-## Testes
+## Testando
 
 ```bash
 # Testes unitários
-$ make test
+$ make tests
 
 # Cobertura dos testes unitários
-$ make test/cov
+$ make tests/cov
 
 # Testes E2E
-$ make test/e2e
+$ make tests/e2e
 ```
 
-`[Estrutura de diretórios aqui]`
+## Estrutura de pastas
+
+Estrutura de pastas conforme o [golang-standards](https://github.com/golang-standards/project-layout):
+
+- `/api`: arquivos de configuração APIRest
+    - `/middlewares`: interceptação de requisiçoes
+    - `server`: configuração RestAPI e das rotas
+- `/configs`: arquivos de configuração
+- `/docs`: documentações
+- `/internal`: código privado da aplicação
+    - `/controllers`: orquestração dos dados recebido pela requisição
+    - `/factories`: estrutura de criação e injeção das dependências
+    - `/infra`: adaptadores de bibliotecas terceiras
+    - `/repositories`: encapsulamento da lógica de acesso aos dados
+    - `/services`: lógica de negócio
+- `/mocks`: unidades falsas para simulação de comportamento de obetos
+- `/tests`: testes end to end
+- `main.go`: execução da aplicação
