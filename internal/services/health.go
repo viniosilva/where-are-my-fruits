@@ -15,18 +15,18 @@ type HealthLogger interface {
 }
 
 type HealthRepository interface {
-	Ping(ctx context.Context) error
+	PingContext(ctx context.Context) error
 }
 
-func NewHealth(healthRepository HealthRepository, logger HealthLogger) *HealthService {
+func NewHealth(repository HealthRepository, logger HealthLogger) *HealthService {
 	return &HealthService{
-		healthRepository: healthRepository,
+		healthRepository: repository,
 		logger:           logger,
 	}
 }
 
 func (impl *HealthService) Check(ctx context.Context) error {
-	err := impl.healthRepository.Ping(ctx)
+	err := impl.healthRepository.PingContext(ctx)
 	if err != nil {
 		impl.logger.Error(err.Error())
 	}

@@ -29,9 +29,10 @@ func TestServer_ConfigServer(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			healthControllerMock := mocks.NewMockHealthController(ctrl)
+			bucketControllerMock := mocks.NewMockBucketController(ctrl)
 
 			// when
-			got := ConfigServer(tt.args.host, tt.args.port, nil, healthControllerMock)
+			got := ConfigServer(tt.args.host, tt.args.port, nil, healthControllerMock, bucketControllerMock)
 
 			// then
 			assert.NotNil(t, got)

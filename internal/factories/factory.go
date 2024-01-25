@@ -4,18 +4,20 @@ import (
 	"database/sql"
 
 	"github.com/viniosilva/where-are-my-fruits/internal/controllers"
-	"github.com/viniosilva/where-are-my-fruits/internal/repositories"
 	"github.com/viniosilva/where-are-my-fruits/internal/services"
 	"go.uber.org/zap"
+	"gorm.io/gorm"
 )
 
 type Factory struct {
 	HealthController *controllers.HealthController
+	BucketController *controllers.BucketController
 }
 
 //go:generate mockgen -source=./factory.go -destination=../../mocks/factory_mocks.go -package=mocks
 type FactoryDB interface {
 	DB() (*sql.DB, error)
+	Create(value interface{}) (tx *gorm.DB)
 }
 
 func Build(db FactoryDB, logger *zap.SugaredLogger) (Factory, error) {
@@ -24,11 +26,14 @@ func Build(db FactoryDB, logger *zap.SugaredLogger) (Factory, error) {
 		return Factory{}, err
 	}
 
-	healthRepository := repositories.NewHealth(sqlDB)
-	healthService := services.NewHealth(healthRepository, logger)
+	healthService := services.NewHealth(sqlDB, logger)
 	healthController := controllers.NewHealth(healthService)
+
+	bucketService := services.NewBucket(db, logger)
+	bucketController := controllers.NewBucket(bucketService)
 
 	return Factory{
 		HealthController: healthController,
+		BucketController: bucketController,
 	}, nil
 }

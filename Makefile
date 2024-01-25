@@ -14,7 +14,7 @@ infra/down:
 	docker-compose down --remove-orphans
 
 db/migration:
-	migrate -database mysql://user_admin:$(MYSQL_PASSWORD)@tcp(localhost:3307)/where-are-my-fruits -path db/migrations up
+	migrate -database mysql://user_admin:$(MYSQL_PASSWORD)@tcp\(localhost:3307\)/where-are-my-fruits -path db/migrations up
 
 docker/image:
 	docker build -t where-are-my-fruits .

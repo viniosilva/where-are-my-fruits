@@ -16,23 +16,23 @@ import (
 
 func TestHealthController_Check(t *testing.T) {
 	tests := map[string]struct {
-		mock     func(healthService *mocks.MockHealthService)
+		mock     func(service *mocks.MockHealthService)
 		wantCode int
-		wantBody presenters.HealthCheckResponse
+		wantBody presenters.HealthCheckRes
 	}{
 		"should be success": {
-			mock: func(healthService *mocks.MockHealthService) {
-				healthService.EXPECT().Check(gomock.Any()).Return(nil)
+			mock: func(service *mocks.MockHealthService) {
+				service.EXPECT().Check(gomock.Any()).Return(nil)
 			},
 			wantCode: http.StatusOK,
-			wantBody: presenters.HealthCheckResponse{Status: presenters.HealthCheckStatusUp},
+			wantBody: presenters.HealthCheckRes{Status: presenters.HealthCheckStatusUp},
 		},
 		"should throw error": {
-			mock: func(healthService *mocks.MockHealthService) {
-				healthService.EXPECT().Check(gomock.Any()).Return(fmt.Errorf("error"))
+			mock: func(service *mocks.MockHealthService) {
+				service.EXPECT().Check(gomock.Any()).Return(fmt.Errorf("error"))
 			},
 			wantCode: http.StatusInternalServerError,
-			wantBody: presenters.HealthCheckResponse{Status: presenters.HealthCheckStatusDown},
+			wantBody: presenters.HealthCheckRes{Status: presenters.HealthCheckStatusDown},
 		},
 	}
 	for name, tt := range tests {
@@ -40,19 +40,20 @@ func TestHealthController_Check(t *testing.T) {
 			// setup
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			healthServiceMock := mocks.NewMockHealthService(ctrl)
-			tt.mock(healthServiceMock)
+			serviceMock := mocks.NewMockHealthService(ctrl)
+			tt.mock(serviceMock)
 
 			r := gin.Default()
-			healthController := NewHealth(healthServiceMock)
+			controller := NewHealth(serviceMock)
 
-			r.GET("/api/healthcheck", healthController.Check)
+			path := "/api/healthcheck"
+			r.GET(path, controller.Check)
 
-			var got presenters.HealthCheckResponse
+			var got presenters.HealthCheckRes
 
 			// given
 			w := httptest.NewRecorder()
-			req, _ := http.NewRequest("GET", "/api/healthcheck", nil)
+			req, _ := http.NewRequest("GET", path, nil)
 
 			// when
 			r.ServeHTTP(w, req)

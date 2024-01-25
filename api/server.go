@@ -17,12 +17,16 @@ type HealthController interface {
 	Check(ctx *gin.Context)
 }
 
+type BucketController interface {
+	Create(ctx *gin.Context)
+}
+
 // @title			Where are my fruits API
 // @version			0.0.1
 // @description		Gerenciamento de frutas em baldes
 // @contact.name	API Support
 // @contact.email	support@wherearemyfruits.com.br
-func ConfigGin(host, port string, logger *zap.SugaredLogger, health HealthController) *gin.Engine {
+func ConfigGin(host, port string, logger *zap.SugaredLogger, health HealthController, bucket BucketController) *gin.Engine {
 	r := gin.New()
 	r.Use(middlewares.JSONLogMiddleware(logger))
 	r.Use(middlewares.CORSMiddleware())
@@ -36,11 +40,13 @@ func ConfigGin(host, port string, logger *zap.SugaredLogger, health HealthContro
 	r.GET("/api/swagger/*any", ginSwagger.WrapHandler(swaggerfiles.Handler))
 	r.GET("/api/healthcheck", health.Check)
 
+	r.POST("/api/v1/buckets", bucket.Create)
+
 	return r
 }
 
-func ConfigServer(host, port string, logger *zap.SugaredLogger, health HealthController) *http.Server {
-	r := ConfigGin(host, port, logger, health)
+func ConfigServer(host, port string, logger *zap.SugaredLogger, health HealthController, bucket BucketController) *http.Server {
+	r := ConfigGin(host, port, logger, health, bucket)
 	server := &http.Server{
 		Addr:    fmt.Sprintf("%s:%s", host, port),
 		Handler: r,

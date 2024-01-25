@@ -9,6 +9,7 @@ import (
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	gorm "gorm.io/gorm"
 )
 
 // MockFactoryDB is a mock of FactoryDB interface.
@@ -32,6 +33,20 @@ func NewMockFactoryDB(ctrl *gomock.Controller) *MockFactoryDB {
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockFactoryDB) EXPECT() *MockFactoryDBMockRecorder {
 	return m.recorder
+}
+
+// Create mocks base method.
+func (m *MockFactoryDB) Create(value interface{}) *gorm.DB {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Create", value)
+	ret0, _ := ret[0].(*gorm.DB)
+	return ret0
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockFactoryDBMockRecorder) Create(value interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockFactoryDB)(nil).Create), value)
 }
 
 // DB mocks base method.

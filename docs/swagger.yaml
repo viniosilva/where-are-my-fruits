@@ -1,12 +1,55 @@
 definitions:
-  presenter.HealthCheckResponse:
+  presenters.BucketRes:
+    properties:
+      capacity:
+        example: 10
+        type: integer
+      created_at:
+        example: "2000-12-31 23:59:59"
+        type: string
+      deleted_at:
+        example: "2000-12-31 23:59:59"
+        type: string
+      id:
+        example: 1
+        type: integer
+      name:
+        example: A
+        type: string
+    type: object
+  presenters.CreateBucketReq:
+    properties:
+      capacity:
+        example: 10
+        type: integer
+      name:
+        example: A
+        type: string
+    type: object
+  presenters.ErrorRes:
+    properties:
+      error:
+        example: Not Found
+        type: string
+      message:
+        example: fruit not found
+        type: string
+      messages:
+        example:
+        - invalid field
+        - invalid value
+        items:
+          type: string
+        type: array
+    type: object
+  presenters.HealthCheckRes:
     properties:
       status:
         allOf:
-        - $ref: '#/definitions/presenter.HealthCheckStatus'
+        - $ref: '#/definitions/presenters.HealthCheckStatus'
         example: down
     type: object
-  presenter.HealthCheckStatus:
+  presenters.HealthCheckStatus:
     enum:
     - up
     - down
@@ -27,12 +70,41 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/presenter.HealthCheckResponse'
+            $ref: '#/definitions/presenters.HealthCheckRes'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/presenter.HealthCheckResponse'
+            $ref: '#/definitions/presenters.HealthCheckRes'
       summary: healthcheck
       tags:
       - health
+  /v1/buckets:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Bucket
+        in: body
+        name: bucket
+        required: true
+        schema:
+          $ref: '#/definitions/presenters.CreateBucketReq'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/presenters.BucketRes'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/presenters.ErrorRes'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/presenters.ErrorRes'
+      summary: create bucket
+      tags:
+      - bucket
 swagger: "2.0"

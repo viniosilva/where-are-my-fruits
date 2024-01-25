@@ -20,13 +20,58 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/presenter.HealthCheckResponse"
+                            "$ref": "#/definitions/presenters.HealthCheckRes"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/presenter.HealthCheckResponse"
+                            "$ref": "#/definitions/presenters.HealthCheckRes"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/buckets": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bucket"
+                ],
+                "summary": "create bucket",
+                "parameters": [
+                    {
+                        "description": "Bucket",
+                        "name": "bucket",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/presenters.CreateBucketReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.BucketRes"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.ErrorRes"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.ErrorRes"
                         }
                     }
                 }
@@ -34,20 +79,81 @@
         }
     },
     "definitions": {
-        "presenter.HealthCheckResponse": {
+        "presenters.BucketRes": {
+            "type": "object",
+            "properties": {
+                "capacity": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2000-12-31 23:59:59"
+                },
+                "deleted_at": {
+                    "type": "string",
+                    "example": "2000-12-31 23:59:59"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "name": {
+                    "type": "string",
+                    "example": "A"
+                }
+            }
+        },
+        "presenters.CreateBucketReq": {
+            "type": "object",
+            "properties": {
+                "capacity": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "name": {
+                    "type": "string",
+                    "example": "A"
+                }
+            }
+        },
+        "presenters.ErrorRes": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "Not Found"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "fruit not found"
+                },
+                "messages": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "invalid field",
+                        "invalid value"
+                    ]
+                }
+            }
+        },
+        "presenters.HealthCheckRes": {
             "type": "object",
             "properties": {
                 "status": {
                     "allOf": [
                         {
-                            "$ref": "#/definitions/presenter.HealthCheckStatus"
+                            "$ref": "#/definitions/presenters.HealthCheckStatus"
                         }
                     ],
                     "example": "down"
                 }
             }
         },
-        "presenter.HealthCheckStatus": {
+        "presenters.HealthCheckStatus": {
             "type": "string",
             "enum": [
                 "up",

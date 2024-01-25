@@ -9,7 +9,7 @@ import (
 )
 
 type HealthController struct {
-	healthService HealthService
+	service HealthService
 }
 
 //go:generate mockgen -source=./health.go -destination=../../mocks/health_controller_mocks.go -package=mocks
@@ -17,9 +17,9 @@ type HealthService interface {
 	Check(ctx context.Context) error
 }
 
-func NewHealth(healthService HealthService) *HealthController {
+func NewHealth(service HealthService) *HealthController {
 	return &HealthController{
-		healthService: healthService,
+		service: service,
 	}
 }
 
@@ -29,16 +29,16 @@ func NewHealth(healthService HealthService) *HealthController {
 // @Tags health
 // @Accept json
 // @Produce json
-// @Success 200 {object} presenters.HealthCheckResponse
-// @Failure 500 {object} presenters.HealthCheckResponse
+// @Success 200 {object} presenters.HealthCheckRes
+// @Failure 500 {object} presenters.HealthCheckRes
 // @Router /healthcheck [get]
 func (impl *HealthController) Check(ctx *gin.Context) {
 	code := http.StatusOK
-	res := &presenters.HealthCheckResponse{
+	res := &presenters.HealthCheckRes{
 		Status: presenters.HealthCheckStatusUp,
 	}
 
-	if err := impl.healthService.Check(ctx); err != nil {
+	if err := impl.service.Check(ctx); err != nil {
 		code = http.StatusInternalServerError
 		res.Status = presenters.HealthCheckStatusDown
 	}

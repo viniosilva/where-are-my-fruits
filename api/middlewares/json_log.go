@@ -45,7 +45,7 @@ func JSONLogMiddleware(logger *zap.SugaredLogger) gin.HandlerFunc {
 			"client_ip", c.ClientIP(),
 			"duration", duration.Milliseconds(),
 			"method", c.Request.Method,
-			"path", c.Request.RequestURI,
+			"path", c.Request.URL.RequestURI(),
 			"query", query,
 			"status", c.Writer.Status(),
 			"referrer", c.Request.Referer(),

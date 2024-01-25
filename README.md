@@ -2,6 +2,10 @@
 
 Gerenciamento de frutas em baldes conforme [desafio](./docs/desafio_backend_planne.pdf)
 
+[> Quadro de planejamento](https://github.com/users/viniosilva/projects/1/views/2)
+
+## Arquitetura
+
 `[Desenho da arquitetura da base de dados aqui]`
 
 ## Requisitos
@@ -35,11 +39,11 @@ $ go get
 
 ### Migração da base de dados
 
-Depois de rodar `docker-compose up -d`, é necessário esperar alguns segundos para rodar o `make migrate` para a criação do schema do banco de dados MySQL.
+Depois de rodar `docker-compose up -d`, é necessário esperar alguns segundos para rodar o `make db/migration` para a criação do schema do banco de dados MySQL.
 
 ```bash
 $ docker-compose up -d
-$ make migrate
+$ make db/migration
 ```
 
 ## Rodando
@@ -63,6 +67,8 @@ $ make tests/cov
 $ make tests/e2e
 ```
 
+OBS: ao executar os testes E2E todas as tabelas do banco de dados Docker serão resetadas!
+
 ## Estrutura de pastas
 
 Estrutura de pastas conforme o [golang-standards](https://github.com/golang-standards/project-layout):
@@ -74,9 +80,11 @@ Estrutura de pastas conforme o [golang-standards](https://github.com/golang-stan
 - `/docs`: documentações
 - `/internal`: código privado da aplicação
     - `/controllers`: orquestração dos dados recebido pela requisição
+    - `/dto`: objetos de transferência de dados entre as camadas 
+    - `/exceptions`: objetos representativos de erros conhecidos pela aplicação 
     - `/factories`: estrutura de criação e injeção das dependências
+    - `/helpers`: objetos auxiliares
     - `/infra`: adaptadores de bibliotecas terceiras
-    - `/repositories`: encapsulamento da lógica de acesso aos dados
     - `/services`: lógica de negócio
 - `/mocks`: unidades falsas para simulação de comportamento de obetos
 - `/tests`: testes end to end

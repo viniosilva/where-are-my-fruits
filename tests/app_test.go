@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -14,14 +15,6 @@ import (
 	"github.com/viniosilva/where-are-my-fruits/internal/factories"
 	"github.com/viniosilva/where-are-my-fruits/internal/infra"
 )
-
-func setupRouter() *gin.Engine {
-	r := gin.Default()
-	r.GET("/api/healthcheck", func(c *gin.Context) {
-		c.String(200, "pong")
-	})
-	return r
-}
 
 func TestApp(t *testing.T) {
 	t.Run("test app", func(t *testing.T) {
@@ -39,25 +32,34 @@ func TestApp(t *testing.T) {
 		factory, err := factories.Build(db, logger)
 		require.Nil(t, err)
 
+		// defers
+		defer db.Exec("DELETE FROM buckets")
+
 		// given
-		r := api.ConfigGin(config.Api.Host, config.Api.Port, logger, factory.HealthController)
+		r := api.ConfigGin(config.Api.Host, config.Api.Port, logger, factory.HealthController, factory.BucketController)
+
+		createBucketReq := presenters.CreateBucketReq{
+			Name:     "Testing",
+			Capacity: 1,
+		}
 
 		// cases
 		getHealth(t, r)
+		postBucket(t, r, createBucketReq)
 	})
 }
 
 func getHealth(t *testing.T, r *gin.Engine) {
 	// given
 	wantCode := http.StatusOK
-	wantBody := presenters.HealthCheckResponse{
+	wantBody := presenters.HealthCheckRes{
 		Status: presenters.HealthCheckStatusUp,
 	}
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest(http.MethodGet, "/api/healthcheck", nil)
+	req, _ := http.NewRequest("GET", "/api/healthcheck", nil)
 
-	var got presenters.HealthCheckResponse
+	var got presenters.HealthCheckRes
 
 	// when
 	r.ServeHTTP(w, req)
@@ -67,6 +69,36 @@ func getHealth(t *testing.T, r *gin.Engine) {
 	// then
 	assert.Equal(t, wantCode, w.Code)
 	assert.Equal(t, wantBody, got)
+}
+
+func postBucket(t *testing.T, r *gin.Engine, data presenters.CreateBucketReq) presenters.BucketRes {
+	// given
+	wantCode := http.StatusCreated
+	wantBody := presenters.BucketRes{
+		Name:     "Testing",
+		Capacity: 1,
+	}
+
+	body, _ := json.Marshal(data)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/v1/buckets", bytes.NewReader(body))
+
+	var got presenters.BucketRes
+
+	// when
+	r.ServeHTTP(w, req)
+
+	json.Unmarshal(w.Body.Bytes(), &got)
+
+	wantBody.ID = got.ID
+	wantBody.CreatedAt = got.CreatedAt
+
+	// then
+	assert.Equal(t, wantCode, w.Code)
+	assert.Equal(t, wantBody, got)
+
+	return got
 }
 
 // Refers: https://gin-gonic.com/docs/testing

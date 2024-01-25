@@ -16,11 +16,11 @@ func TestHealthService_NewHealth(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		healthRepositoryMock := mocks.NewMockHealthRepository(ctrl)
+		repositoryMock := mocks.NewMockHealthRepository(ctrl)
 		loggerMock := mocks.NewMockHealthLogger(ctrl)
 
 		// given
-		got := NewHealth(healthRepositoryMock, loggerMock)
+		got := NewHealth(repositoryMock, loggerMock)
 
 		assert.NotNil(t, got)
 	})
@@ -28,17 +28,17 @@ func TestHealthService_NewHealth(t *testing.T) {
 
 func TestHealthService_Check(t *testing.T) {
 	tests := map[string]struct {
-		mock    func(healthRepository *mocks.MockHealthRepository, logger *mocks.MockHealthLogger)
+		mock    func(repository *mocks.MockHealthRepository, logger *mocks.MockHealthLogger)
 		wantErr string
 	}{
 		"should be success": {
-			mock: func(healthRepository *mocks.MockHealthRepository, logger *mocks.MockHealthLogger) {
-				healthRepository.EXPECT().Ping(gomock.Any()).Return(nil)
+			mock: func(repository *mocks.MockHealthRepository, logger *mocks.MockHealthLogger) {
+				repository.EXPECT().PingContext(gomock.Any()).Return(nil)
 			},
 		},
 		"should throw error": {
-			mock: func(healthRepository *mocks.MockHealthRepository, logger *mocks.MockHealthLogger) {
-				healthRepository.EXPECT().Ping(gomock.Any()).Return(fmt.Errorf("error"))
+			mock: func(repository *mocks.MockHealthRepository, logger *mocks.MockHealthLogger) {
+				repository.EXPECT().PingContext(gomock.Any()).Return(fmt.Errorf("error"))
 				logger.EXPECT().Error(gomock.Any())
 			},
 			wantErr: "error",
@@ -52,18 +52,18 @@ func TestHealthService_Check(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			healthRepositoryMock := mocks.NewMockHealthRepository(ctrl)
+			repository := mocks.NewMockHealthRepository(ctrl)
 			loggerMock := mocks.NewMockHealthLogger(ctrl)
-			tt.mock(healthRepositoryMock, loggerMock)
+			tt.mock(repository, loggerMock)
 
 			// given
-			healthService := NewHealth(healthRepositoryMock, loggerMock)
+			service := NewHealth(repository, loggerMock)
 
 			// when
-			err := healthService.Check(ctx)
+			err := service.Check(ctx)
 
 			// then
-			if err != nil {
+			if err != nil || tt.wantErr != "" {
 				assert.EqualError(t, err, tt.wantErr)
 			}
 		})

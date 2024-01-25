@@ -33,7 +33,7 @@ func main() {
 		log.Fatalf("factory.Build: %s\n", err)
 	}
 
-	server := api.ConfigServer(config.Api.Host, config.Api.Port, logger, factory.HealthController)
+	server := api.ConfigServer(config.Api.Host, config.Api.Port, logger, factory.HealthController, factory.BucketController)
 
 	go func() {
 		if err = server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
