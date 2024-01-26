@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"context"
 	"net/http"
 	"time"
 
@@ -14,11 +13,6 @@ import (
 
 type BucketController struct {
 	service BucketService
-}
-
-//go:generate mockgen -source=./bucket.go -destination=../../mocks/bucket_controller_mocks.go -package=mocks
-type BucketService interface {
-	Create(ctx context.Context, data dtos.CreateBucketDto) (*models.Bucket, error)
 }
 
 func NewBucket(service BucketService) *BucketController {

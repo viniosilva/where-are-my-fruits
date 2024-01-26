@@ -1,39 +1,36 @@
 package factories
 
 import (
-	"database/sql"
-
+	"github.com/go-playground/validator/v10"
 	"github.com/viniosilva/where-are-my-fruits/internal/controllers"
+	"github.com/viniosilva/where-are-my-fruits/internal/infra"
+	"github.com/viniosilva/where-are-my-fruits/internal/repositories"
 	"github.com/viniosilva/where-are-my-fruits/internal/services"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 type Factory struct {
 	HealthController *controllers.HealthController
 	BucketController *controllers.BucketController
+	FruitController  *controllers.FruitController
 }
 
-//go:generate mockgen -source=./factory.go -destination=../../mocks/factory_mocks.go -package=mocks
-type FactoryDB interface {
-	DB() (*sql.DB, error)
-	Create(value interface{}) (tx *gorm.DB)
-}
+func Build(database *infra.Database, logger *zap.SugaredLogger, validate *validator.Validate) (Factory, error) {
+	healthRepository := repositories.NewHealth(database.SQL)
+	bucketRepository := repositories.NewBucket(database.DB)
+	fruitRepository := repositories.NewFruit(database.DB)
 
-func Build(db FactoryDB, logger *zap.SugaredLogger) (Factory, error) {
-	sqlDB, err := db.DB()
-	if err != nil {
-		return Factory{}, err
-	}
+	healthService := services.NewHealth(healthRepository, logger)
+	bucketService := services.NewBucket(bucketRepository, logger, validate)
+	fruitService := services.NewFruit(fruitRepository, logger, validate)
 
-	healthService := services.NewHealth(sqlDB, logger)
 	healthController := controllers.NewHealth(healthService)
-
-	bucketService := services.NewBucket(db, logger)
 	bucketController := controllers.NewBucket(bucketService)
+	fruitController := controllers.NewFruit(fruitService)
 
 	return Factory{
 		HealthController: healthController,
 		BucketController: bucketController,
+		FruitController:  fruitController,
 	}, nil
 }

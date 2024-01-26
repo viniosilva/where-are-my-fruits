@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -10,11 +9,6 @@ import (
 
 type HealthController struct {
 	service HealthService
-}
-
-//go:generate mockgen -source=./health.go -destination=../../mocks/health_controller_mocks.go -package=mocks
-type HealthService interface {
-	Check(ctx context.Context) error
 }
 
 func NewHealth(service HealthService) *HealthController {

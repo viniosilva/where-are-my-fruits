@@ -26,6 +26,21 @@ definitions:
         example: A
         type: string
     type: object
+  presenters.CreateFruitReq:
+    properties:
+      bucket_id:
+        example: 1
+        type: integer
+      expires_in:
+        example: 1m
+        type: string
+      name:
+        example: Orange
+        type: string
+      price:
+        example: 1.99
+        type: number
+    type: object
   presenters.ErrorRes:
     properties:
       error:
@@ -41,6 +56,30 @@ definitions:
         items:
           type: string
         type: array
+    type: object
+  presenters.FruitRes:
+    properties:
+      bucket_id:
+        example: 1
+        type: integer
+      created_at:
+        example: "2000-12-31 23:59:59"
+        type: string
+      deleted_at:
+        example: "2000-12-31 23:59:59"
+        type: string
+      expires_at:
+        example: 1m
+        type: string
+      id:
+        example: 1
+        type: integer
+      name:
+        example: Orange
+        type: string
+      price:
+        example: 1.99
+        type: number
     type: object
   presenters.HealthCheckRes:
     properties:
@@ -107,4 +146,33 @@ paths:
       summary: create bucket
       tags:
       - bucket
+  /v1/fruits:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Fruit
+        in: body
+        name: fruit
+        required: true
+        schema:
+          $ref: '#/definitions/presenters.CreateFruitReq'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/presenters.FruitRes'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/presenters.ErrorRes'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/presenters.ErrorRes'
+      summary: create fruit
+      tags:
+      - fruit
 swagger: "2.0"

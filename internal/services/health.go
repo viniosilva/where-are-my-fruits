@@ -6,19 +6,10 @@ import (
 
 type HealthService struct {
 	healthRepository HealthRepository
-	logger           HealthLogger
+	logger           Logger
 }
 
-//go:generate mockgen -source=./health.go -destination=../../mocks/health_service_mocks.go -package=mocks
-type HealthLogger interface {
-	Error(args ...interface{})
-}
-
-type HealthRepository interface {
-	PingContext(ctx context.Context) error
-}
-
-func NewHealth(repository HealthRepository, logger HealthLogger) *HealthService {
+func NewHealth(repository HealthRepository, logger Logger) *HealthService {
 	return &HealthService{
 		healthRepository: repository,
 		logger:           logger,
@@ -26,7 +17,7 @@ func NewHealth(repository HealthRepository, logger HealthLogger) *HealthService 
 }
 
 func (impl *HealthService) Check(ctx context.Context) error {
-	err := impl.healthRepository.PingContext(ctx)
+	err := impl.healthRepository.Ping(ctx)
 	if err != nil {
 		impl.logger.Error(err.Error())
 	}

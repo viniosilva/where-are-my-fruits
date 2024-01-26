@@ -30,9 +30,10 @@ func TestServer_ConfigServer(t *testing.T) {
 			defer ctrl.Finish()
 			healthControllerMock := mocks.NewMockHealthController(ctrl)
 			bucketControllerMock := mocks.NewMockBucketController(ctrl)
+			fruitControllerMock := mocks.NewMockFruitController(ctrl)
 
 			// when
-			got := ConfigServer(tt.args.host, tt.args.port, nil, healthControllerMock, bucketControllerMock)
+			got := ConfigServer(tt.args.host, tt.args.port, nil, healthControllerMock, bucketControllerMock, fruitControllerMock)
 
 			// then
 			assert.NotNil(t, got)

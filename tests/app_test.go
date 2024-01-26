@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/viniosilva/where-are-my-fruits/api"
@@ -29,23 +30,38 @@ func TestApp(t *testing.T) {
 			config.MySQL.MaxIdleConns, config.MySQL.MaxOpenConns)
 		require.Nil(t, err)
 
-		factory, err := factories.Build(db, logger)
+		validate := infra.NewValidator()
+
+		factory, err := factories.Build(db, logger, validate)
 		require.Nil(t, err)
 
 		// defers
-		defer db.Exec("DELETE FROM buckets")
+		defer db.SQL.Exec("DELETE FROM fruits")
+		defer db.SQL.Exec("DELETE FROM buckets")
 
 		// given
-		r := api.ConfigGin(config.Api.Host, config.Api.Port, logger, factory.HealthController, factory.BucketController)
+		r := api.ConfigGin(config.Api.Host, config.Api.Port, logger, factory.HealthController, factory.BucketController, factory.FruitController)
 
 		createBucketReq := presenters.CreateBucketReq{
 			Name:     "Testing",
 			Capacity: 1,
 		}
 
+		price, _ := decimal.NewFromString("1.99")
+		createFruitReq := presenters.CreateFruitReq{
+			Name:      "Testing",
+			Price:     price,
+			ExpiresIn: "1h",
+		}
+
 		// cases
 		getHealth(t, r)
-		postBucket(t, r, createBucketReq)
+
+		bucket := postBucket(t, r, createBucketReq)
+		postFruit(t, r, createFruitReq)
+
+		createFruitReq.BucketID = &bucket.ID
+		postFruit(t, r, createFruitReq)
 	})
 }
 
@@ -93,6 +109,39 @@ func postBucket(t *testing.T, r *gin.Engine, data presenters.CreateBucketReq) pr
 
 	wantBody.ID = got.ID
 	wantBody.CreatedAt = got.CreatedAt
+
+	// then
+	assert.Equal(t, wantCode, w.Code)
+	assert.Equal(t, wantBody, got)
+
+	return got
+}
+
+func postFruit(t *testing.T, r *gin.Engine, data presenters.CreateFruitReq) presenters.FruitRes {
+	// given
+	price, _ := decimal.NewFromString("1.99")
+	wantCode := http.StatusCreated
+	wantBody := presenters.FruitRes{
+		Name:  "Testing",
+		Price: price,
+	}
+
+	body, _ := json.Marshal(data)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/api/v1/fruits", bytes.NewReader(body))
+
+	var got presenters.FruitRes
+
+	// when
+	r.ServeHTTP(w, req)
+
+	json.Unmarshal(w.Body.Bytes(), &got)
+
+	wantBody.ID = got.ID
+	wantBody.CreatedAt = got.CreatedAt
+	wantBody.ExpiresAt = got.ExpiresAt
+	wantBody.BucketID = got.BucketID
 
 	// then
 	assert.Equal(t, wantCode, w.Code)

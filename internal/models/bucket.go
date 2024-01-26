@@ -12,3 +12,10 @@ type Bucket struct {
 	Name     string `gorm:"column:name"`
 	Capacity int    `gorm:"column:capacity"`
 }
+
+func (Bucket) TableName() string {
+	return "buckets"
+}
+
+// Refers: https://gorm.io/docs/conventions.html#Pluralized-Table-Name
+//		   https://gorm.io/docs/conventions.html#Column-Name

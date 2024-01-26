@@ -21,12 +21,16 @@ type BucketController interface {
 	Create(ctx *gin.Context)
 }
 
+type FruitController interface {
+	Create(ctx *gin.Context)
+}
+
 // @title			Where are my fruits API
 // @version			0.0.1
 // @description		Gerenciamento de frutas em baldes
 // @contact.name	API Support
 // @contact.email	support@wherearemyfruits.com.br
-func ConfigGin(host, port string, logger *zap.SugaredLogger, health HealthController, bucket BucketController) *gin.Engine {
+func ConfigGin(host, port string, logger *zap.SugaredLogger, health HealthController, bucket BucketController, fruit FruitController) *gin.Engine {
 	r := gin.New()
 	r.Use(middlewares.JSONLogMiddleware(logger))
 	r.Use(middlewares.CORSMiddleware())
@@ -42,11 +46,13 @@ func ConfigGin(host, port string, logger *zap.SugaredLogger, health HealthContro
 
 	r.POST("/api/v1/buckets", bucket.Create)
 
+	r.POST("/api/v1/fruits", fruit.Create)
+
 	return r
 }
 
-func ConfigServer(host, port string, logger *zap.SugaredLogger, health HealthController, bucket BucketController) *http.Server {
-	r := ConfigGin(host, port, logger, health, bucket)
+func ConfigServer(host, port string, logger *zap.SugaredLogger, health HealthController, bucket BucketController, fruit FruitController) *http.Server {
+	r := ConfigGin(host, port, logger, health, bucket, fruit)
 	server := &http.Server{
 		Addr:    fmt.Sprintf("%s:%s", host, port),
 		Handler: r,
@@ -56,5 +62,4 @@ func ConfigServer(host, port string, logger *zap.SugaredLogger, health HealthCon
 }
 
 // Refers: https://gin-gonic.com/docs/examples/using-middleware
-//		   https://gin-gonic.com/docs/examples/grouping-routes
 //		   https://github.com/swaggo/swag?tab=readme-ov-file#how-to-use-it-with-gin

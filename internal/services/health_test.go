@@ -17,28 +17,29 @@ func TestHealthService_NewHealth(t *testing.T) {
 		defer ctrl.Finish()
 
 		repositoryMock := mocks.NewMockHealthRepository(ctrl)
-		loggerMock := mocks.NewMockHealthLogger(ctrl)
+		loggerMock := mocks.NewMockLogger(ctrl)
 
 		// given
 		got := NewHealth(repositoryMock, loggerMock)
 
+		// then
 		assert.NotNil(t, got)
 	})
 }
 
 func TestHealthService_Check(t *testing.T) {
 	tests := map[string]struct {
-		mock    func(repository *mocks.MockHealthRepository, logger *mocks.MockHealthLogger)
+		mock    func(repository *mocks.MockHealthRepository, logger *mocks.MockLogger)
 		wantErr string
 	}{
 		"should be success": {
-			mock: func(repository *mocks.MockHealthRepository, logger *mocks.MockHealthLogger) {
-				repository.EXPECT().PingContext(gomock.Any()).Return(nil)
+			mock: func(repository *mocks.MockHealthRepository, logger *mocks.MockLogger) {
+				repository.EXPECT().Ping(gomock.Any()).Return(nil)
 			},
 		},
 		"should throw error": {
-			mock: func(repository *mocks.MockHealthRepository, logger *mocks.MockHealthLogger) {
-				repository.EXPECT().PingContext(gomock.Any()).Return(fmt.Errorf("error"))
+			mock: func(repository *mocks.MockHealthRepository, logger *mocks.MockLogger) {
+				repository.EXPECT().Ping(gomock.Any()).Return(fmt.Errorf("error"))
 				logger.EXPECT().Error(gomock.Any())
 			},
 			wantErr: "error",
@@ -52,12 +53,12 @@ func TestHealthService_Check(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			repository := mocks.NewMockHealthRepository(ctrl)
-			loggerMock := mocks.NewMockHealthLogger(ctrl)
-			tt.mock(repository, loggerMock)
+			repositoryMock := mocks.NewMockHealthRepository(ctrl)
+			loggerMock := mocks.NewMockLogger(ctrl)
+			tt.mock(repositoryMock, loggerMock)
 
 			// given
-			service := NewHealth(repository, loggerMock)
+			service := NewHealth(repositoryMock, loggerMock)
 
 			// when
 			err := service.Check(ctx)

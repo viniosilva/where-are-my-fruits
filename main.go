@@ -28,12 +28,14 @@ func main() {
 		log.Fatalf("infra.ConfigDB: %s\n", err)
 	}
 
-	factory, err := factories.Build(db, logger)
+	validate := infra.NewValidator()
+
+	factory, err := factories.Build(db, logger, validate)
 	if err != nil {
 		log.Fatalf("factory.Build: %s\n", err)
 	}
 
-	server := api.ConfigServer(config.Api.Host, config.Api.Port, logger, factory.HealthController, factory.BucketController)
+	server := api.ConfigServer(config.Api.Host, config.Api.Port, logger, factory.HealthController, factory.BucketController, factory.FruitController)
 
 	go func() {
 		if err = server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -47,12 +49,7 @@ func main() {
 
 	logger.Info("Shutdown server...")
 
-	sqlDB, err := db.DB()
-	if err != nil {
-		log.Fatalf("db.DB: %s\n", err)
-	} else {
-		sqlDB.Close()
-	}
+	db.SQL.Close()
 
 	ctx := context.Background()
 	if err := server.Shutdown(ctx); err != nil {

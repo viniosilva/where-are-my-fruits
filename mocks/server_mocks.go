@@ -80,3 +80,38 @@ func (mr *MockBucketControllerMockRecorder) Create(ctx interface{}) *gomock.Call
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockBucketController)(nil).Create), ctx)
 }
+
+// MockFruitController is a mock of FruitController interface.
+type MockFruitController struct {
+	ctrl     *gomock.Controller
+	recorder *MockFruitControllerMockRecorder
+}
+
+// MockFruitControllerMockRecorder is the mock recorder for MockFruitController.
+type MockFruitControllerMockRecorder struct {
+	mock *MockFruitController
+}
+
+// NewMockFruitController creates a new mock instance.
+func NewMockFruitController(ctrl *gomock.Controller) *MockFruitController {
+	mock := &MockFruitController{ctrl: ctrl}
+	mock.recorder = &MockFruitControllerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockFruitController) EXPECT() *MockFruitControllerMockRecorder {
+	return m.recorder
+}
+
+// Create mocks base method.
+func (m *MockFruitController) Create(ctx *gin.Context) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Create", ctx)
+}
+
+// Create indicates an expected call of Create.
+func (mr *MockFruitControllerMockRecorder) Create(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockFruitController)(nil).Create), ctx)
+}

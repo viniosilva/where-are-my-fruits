@@ -87,6 +87,51 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/v1/fruits": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fruit"
+                ],
+                "summary": "create fruit",
+                "parameters": [
+                    {
+                        "description": "Fruit",
+                        "name": "fruit",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/presenters.CreateFruitReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.FruitRes"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.ErrorRes"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.ErrorRes"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -128,6 +173,27 @@ const docTemplate = `{
                 }
             }
         },
+        "presenters.CreateFruitReq": {
+            "type": "object",
+            "properties": {
+                "bucket_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "expires_in": {
+                    "type": "string",
+                    "example": "1m"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Orange"
+                },
+                "price": {
+                    "type": "number",
+                    "example": 1.99
+                }
+            }
+        },
         "presenters.ErrorRes": {
             "type": "object",
             "properties": {
@@ -148,6 +214,39 @@ const docTemplate = `{
                         "invalid field",
                         "invalid value"
                     ]
+                }
+            }
+        },
+        "presenters.FruitRes": {
+            "type": "object",
+            "properties": {
+                "bucket_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2000-12-31 23:59:59"
+                },
+                "deleted_at": {
+                    "type": "string",
+                    "example": "2000-12-31 23:59:59"
+                },
+                "expires_at": {
+                    "type": "string",
+                    "example": "1m"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Orange"
+                },
+                "price": {
+                    "type": "number",
+                    "example": 1.99
                 }
             }
         },
