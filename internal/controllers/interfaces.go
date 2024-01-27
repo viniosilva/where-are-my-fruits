@@ -19,4 +19,5 @@ type BucketService interface {
 type FruitService interface {
 	Create(ctx context.Context, data dtos.CreateFruitDto) (*models.Fruit, error)
 	AddOnBucket(ctx context.Context, fruitID, bucketID int64) error
+	RemoveFromBucket(ctx context.Context, fruitID, bucketID int64) error
 }

@@ -176,6 +176,36 @@ paths:
       tags:
       - fruit
   /v1/fruits/{fruitID}/buckets/{bucketID}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Fruit ID
+        in: path
+        name: fruitID
+        required: true
+        type: integer
+      - description: Bucket ID
+        in: path
+        name: bucketID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/presenters.ErrorRes'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/presenters.ErrorRes'
+      summary: remove fruit from bucket
+      tags:
+      - fruit
     post:
       consumes:
       - application/json

@@ -18,6 +18,7 @@ func init() {
 type DB interface {
 	Create(value interface{}) (tx *gorm.DB)
 	Transaction(fc func(tx *gorm.DB) error, opts ...*sql.TxOptions) (err error)
+	Model(value interface{}) (tx *gorm.DB)
 }
 
 type SQL interface {

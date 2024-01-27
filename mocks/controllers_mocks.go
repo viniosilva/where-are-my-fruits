@@ -139,3 +139,17 @@ func (mr *MockFruitServiceMockRecorder) Create(ctx, data interface{}) *gomock.Ca
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockFruitService)(nil).Create), ctx, data)
 }
+
+// RemoveFromBucket mocks base method.
+func (m *MockFruitService) RemoveFromBucket(ctx context.Context, fruitID, bucketID int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "RemoveFromBucket", ctx, fruitID, bucketID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RemoveFromBucket indicates an expected call of RemoveFromBucket.
+func (mr *MockFruitServiceMockRecorder) RemoveFromBucket(ctx, fruitID, bucketID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RemoveFromBucket", reflect.TypeOf((*MockFruitService)(nil).RemoveFromBucket), ctx, fruitID, bucketID)
+}

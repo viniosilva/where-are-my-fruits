@@ -75,3 +75,14 @@ func (impl *FruitService) AddOnBucket(ctx context.Context, fruitID, bucketID int
 
 	return nil
 }
+
+func (impl *FruitService) RemoveFromBucket(ctx context.Context, fruitID, bucketID int64) error {
+	err := impl.repository.RemoveFromBucket(fruitID, bucketID)
+
+	if err != nil {
+		impl.logger.Error(err.Error())
+		return err
+	}
+
+	return nil
+}

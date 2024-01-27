@@ -263,3 +263,54 @@ func TestFruitService_AddOnBucket(t *testing.T) {
 		})
 	}
 }
+
+func TestFruitService_RemoveFromBucket(t *testing.T) {
+	tests := map[string]struct {
+		mock     func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, time *mocks.MockTime)
+		fruitID  int64
+		bucketID int64
+		wantErr  string
+	}{
+		"should be success when bucket and fruits exist": {
+			mock: func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, mTime *mocks.MockTime) {
+				repository.EXPECT().RemoveFromBucket(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			fruitID:  1,
+			bucketID: 1,
+		},
+		"should throw error": {
+			mock: func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, mTime *mocks.MockTime) {
+				repository.EXPECT().RemoveFromBucket(gomock.Any(), gomock.Any()).Return(fmt.Errorf("error"))
+				logger.EXPECT().Error(gomock.Any())
+			},
+			fruitID:  1,
+			bucketID: 1,
+			wantErr:  "error",
+		},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			//setup
+			ctx := context.Background()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			repositoryMock := mocks.NewMockFruitRepository(ctrl)
+			loggerMock := mocks.NewMockLogger(ctrl)
+
+			tt.mock(repositoryMock, loggerMock, nil)
+
+			// given
+			service := NewFruit(repositoryMock, loggerMock, nil)
+
+			// when
+			err := service.RemoveFromBucket(ctx, tt.fruitID, tt.bucketID)
+
+			// then
+			if err != nil || tt.wantErr != "" {
+				assert.EqualError(t, err, tt.wantErr)
+			}
+		})
+	}
+}

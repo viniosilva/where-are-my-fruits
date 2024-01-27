@@ -50,6 +50,20 @@ func (mr *MockDBMockRecorder) Create(value interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockDB)(nil).Create), value)
 }
 
+// Model mocks base method.
+func (m *MockDB) Model(value interface{}) *gorm.DB {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Model", value)
+	ret0, _ := ret[0].(*gorm.DB)
+	return ret0
+}
+
+// Model indicates an expected call of Model.
+func (mr *MockDBMockRecorder) Model(value interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Model", reflect.TypeOf((*MockDB)(nil).Model), value)
+}
+
 // Transaction mocks base method.
 func (m *MockDB) Transaction(fc func(*gorm.DB) error, opts ...*sql.TxOptions) error {
 	m.ctrl.T.Helper()

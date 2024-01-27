@@ -60,10 +60,13 @@ func TestApp(t *testing.T) {
 
 		bucket := createBucket(t, r, createBucketReq)
 		fruit := createFruit(t, r, createFruitReq)
+
 		addFruitOnBucket(t, r, fruit.ID, bucket.ID)
 
 		createFruitReq.BucketID = &bucket.ID
 		createFruit(t, r, createFruitReq)
+
+		removeFruitFromBucket(t, r, fruit.ID, bucket.ID)
 	})
 }
 
@@ -159,6 +162,21 @@ func addFruitOnBucket(t *testing.T, r *gin.Engine, fruitID, bucketID int64) {
 	path := fmt.Sprintf("/api/v1/fruits/%d/buckets/%d", fruitID, bucketID)
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("POST", path, nil)
+
+	// when
+	r.ServeHTTP(w, req)
+
+	// then
+	assert.Equal(t, wantCode, w.Code)
+}
+
+func removeFruitFromBucket(t *testing.T, r *gin.Engine, fruitID, bucketID int64) {
+	// given
+	wantCode := http.StatusOK
+
+	path := fmt.Sprintf("/api/v1/fruits/%d/buckets/%d", fruitID, bucketID)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("DELETE", path, nil)
 
 	// when
 	r.ServeHTTP(w, req)

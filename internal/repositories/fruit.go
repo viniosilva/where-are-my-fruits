@@ -56,6 +56,14 @@ func (impl *FruitRepository) AddOnBucket(fruitID, bucketID int64) error {
 	return err
 }
 
+func (impl *FruitRepository) RemoveFromBucket(fruitID, bucketID int64) error {
+	res := impl.db.Model(&models.Fruit{}).
+		Where("id = ?", fruitID).
+		Update("bucket_fk", nil)
+
+	return res.Error
+}
+
 func (impl *FruitRepository) ValidateBucket(bucketID int64, db *gorm.DB) error {
 	now := _time.Now()
 
