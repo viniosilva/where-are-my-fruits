@@ -2,22 +2,24 @@ package services
 
 import (
 	"context"
+
+	"github.com/viniosilva/where-are-my-fruits/internal/infra"
 )
 
 type HealthService struct {
-	healthRepository HealthRepository
-	logger           Logger
+	db     *infra.Database
+	logger Logger
 }
 
-func NewHealth(repository HealthRepository, logger Logger) *HealthService {
+func NewHealth(db *infra.Database, logger Logger) *HealthService {
 	return &HealthService{
-		healthRepository: repository,
-		logger:           logger,
+		db:     db,
+		logger: logger,
 	}
 }
 
 func (impl *HealthService) Check(ctx context.Context) error {
-	err := impl.healthRepository.Ping(ctx)
+	err := impl.db.SQL.PingContext(ctx)
 	if err != nil {
 		impl.logger.Error(err.Error())
 	}

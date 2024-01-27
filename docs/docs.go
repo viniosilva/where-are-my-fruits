@@ -133,8 +133,8 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/fruits/{fruitID}/buckets/{bucketID}": {
-            "post": {
+        "/v1/fruits/{fruitID}": {
+            "delete": {
                 "consumes": [
                     "application/json"
                 ],
@@ -144,19 +144,12 @@ const docTemplate = `{
                 "tags": [
                     "fruit"
                 ],
-                "summary": "add fruit on bucket",
+                "summary": "delete fruit",
                 "parameters": [
                     {
                         "type": "integer",
                         "description": "Fruit ID",
                         "name": "fruitID",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Bucket ID",
-                        "name": "bucketID",
                         "in": "path",
                         "required": true
                     }
@@ -178,7 +171,9 @@ const docTemplate = `{
                         }
                     }
                 }
-            },
+            }
+        },
+        "/v1/fruits/{fruitID}/buckets": {
             "delete": {
                 "consumes": [
                     "application/json"
@@ -190,6 +185,46 @@ const docTemplate = `{
                     "fruit"
                 ],
                 "summary": "remove fruit from bucket",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Fruit ID",
+                        "name": "fruitID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.ErrorRes"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.ErrorRes"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/fruits/{fruitID}/buckets/{bucketID}": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fruit"
+                ],
+                "summary": "add fruit on bucket",
                 "parameters": [
                     {
                         "type": "integer",

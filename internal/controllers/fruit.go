@@ -126,11 +126,10 @@ func (impl *FruitController) AddOnBucket(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param fruitID path int64 true "Fruit ID"
-// @Param bucketID path int64 true "Bucket ID"
 // @Success 200 {object} nil
 // @Failure 400 {object} presenters.ErrorRes
 // @Failure 500 {object} presenters.ErrorRes
-// @Router /v1/fruits/{fruitID}/buckets/{bucketID} [delete]
+// @Router /v1/fruits/{fruitID}/buckets [delete]
 func (impl *FruitController) RemoveFromBucket(ctx *gin.Context) {
 	fruitID, err := strconv.ParseInt(ctx.Param("fruitID"), 10, 64)
 	if err != nil {
@@ -138,13 +137,34 @@ func (impl *FruitController) RemoveFromBucket(ctx *gin.Context) {
 		return
 	}
 
-	bucketID, err := strconv.ParseInt(ctx.Param("bucketID"), 10, 64)
+	err = impl.service.RemoveFromBucket(ctx, fruitID)
 	if err != nil {
-		ctx.JSON(http.StatusBadRequest, presenters.ErrorRes{Error: exceptions.ValidationExceptionName, Message: "invalid bucketID"})
+		ctx.JSON(http.StatusInternalServerError, presenters.ErrorRes{Error: http.StatusText(http.StatusInternalServerError)})
 		return
 	}
 
-	err = impl.service.RemoveFromBucket(ctx, fruitID, bucketID)
+	ctx.Status(http.StatusOK)
+}
+
+// Fruit godoc
+// @Summary delete fruit
+// @Schemes
+// @Tags fruit
+// @Accept json
+// @Produce json
+// @Param fruitID path int64 true "Fruit ID"
+// @Success 200 {object} nil
+// @Failure 400 {object} presenters.ErrorRes
+// @Failure 500 {object} presenters.ErrorRes
+// @Router /v1/fruits/{fruitID} [delete]
+func (impl *FruitController) Delete(ctx *gin.Context) {
+	fruitID, err := strconv.ParseInt(ctx.Param("fruitID"), 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, presenters.ErrorRes{Error: exceptions.ValidationExceptionName, Message: "invalid fruitID"})
+		return
+	}
+
+	err = impl.service.Delete(ctx, fruitID)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, presenters.ErrorRes{Error: http.StatusText(http.StatusInternalServerError)})
 		return

@@ -9,15 +9,15 @@ import (
 	"gorm.io/gorm"
 )
 
-const (
-	MYSQL_ERROR_FOREIGN_NOT_EXISTS uint16 = 1452
-	MYSQL_ERROR_NOT_FOUND                 = "record not found"
-)
-
 type Database struct {
 	DB  *gorm.DB
 	SQL *sql.DB
 }
+
+const (
+	MYSQL_ERROR_FOREIGN_NOT_EXISTS uint16 = 1452
+	MYSQL_ERROR_NOT_FOUND                 = "record not found"
+)
 
 func ConfigDB(username, password, host, port, dbname string,
 	connMaxLifetime time.Duration,
@@ -43,10 +43,7 @@ func ConfigDB(username, password, host, port, dbname string,
 		return nil, err
 	}
 
-	return &Database{
-		DB:  db,
-		SQL: sql,
-	}, nil
+	return &Database{DB: db, SQL: sql}, nil
 }
 
 // Refers: https://gorm.io/docs/connecting_to_the_database.html#MySQL

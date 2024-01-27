@@ -5,20 +5,21 @@ import (
 
 	"github.com/viniosilva/where-are-my-fruits/internal/dtos"
 	"github.com/viniosilva/where-are-my-fruits/internal/exceptions"
+	"github.com/viniosilva/where-are-my-fruits/internal/infra"
 	"github.com/viniosilva/where-are-my-fruits/internal/models"
 )
 
 type BucketService struct {
-	repository BucketRepository
-	logger     Logger
-	validate   Validate
+	db       *infra.Database
+	logger   Logger
+	validate Validate
 }
 
-func NewBucket(repository BucketRepository, logger Logger, validate Validate) *BucketService {
+func NewBucket(db *infra.Database, logger Logger, validate Validate) *BucketService {
 	return &BucketService{
-		repository: repository,
-		logger:     logger,
-		validate:   validate,
+		db:       db,
+		logger:   logger,
+		validate: validate,
 	}
 }
 
@@ -33,9 +34,8 @@ func (impl *BucketService) Create(ctx context.Context, data dtos.CreateBucketDto
 		Capacity:  data.Capacity,
 	}
 
-	err := impl.repository.Create(&bucket)
-
-	if err != nil {
+	res := impl.db.DB.Create(&bucket)
+	if err := res.Error; err != nil {
 		impl.logger.Error(err.Error())
 		return nil, err
 	}

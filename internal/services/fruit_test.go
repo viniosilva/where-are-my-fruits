@@ -7,15 +7,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-sql-driver/mysql"
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/golang/mock/gomock"
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/viniosilva/where-are-my-fruits/internal/dtos"
-	"github.com/viniosilva/where-are-my-fruits/internal/exceptions"
 	"github.com/viniosilva/where-are-my-fruits/internal/infra"
 	"github.com/viniosilva/where-are-my-fruits/internal/models"
 	"github.com/viniosilva/where-are-my-fruits/mocks"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
 
 func TestFruitService_NewFruit(t *testing.T) {
@@ -24,12 +26,11 @@ func TestFruitService_NewFruit(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		repositoryMock := mocks.NewMockFruitRepository(ctrl)
 		loggerMock := mocks.NewMockLogger(ctrl)
 		validate := infra.NewValidator()
 
 		// given
-		got := NewFruit(repositoryMock, loggerMock, validate)
+		got := NewFruit(nil, loggerMock, validate)
 
 		// then
 		assert.NotNil(t, got)
@@ -42,18 +43,17 @@ func TestFruitService_Create(t *testing.T) {
 	bucketID := int64(1)
 
 	tests := map[string]struct {
-		mock    func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, time *mocks.MockTime)
+		mock    func(db sqlmock.Sqlmock, logger *mocks.MockLogger, mTime *mocks.MockTime)
 		data    dtos.CreateFruitDto
 		want    *models.Fruit
 		wantErr string
 	}{
 		"should be success when name is 128 length, price is 0 and expires in 1 second": {
-			mock: func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, mTime *mocks.MockTime) {
+			mock: func(db sqlmock.Sqlmock, logger *mocks.MockLogger, mTime *mocks.MockTime) {
 				mTime.EXPECT().Now().Return(now)
-				repository.EXPECT().Create(gomock.Any()).DoAndReturn(func(arg0 *models.Fruit) error {
-					arg0.ID = 1
-					return nil
-				})
+				db.ExpectBegin()
+				db.ExpectExec("INSERT").WillReturnResult(sqlmock.NewResult(1, 1))
+				db.ExpectCommit()
 			},
 			data: dtos.CreateFruitDto{
 				Name:      "Testing lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris at ligula metus. Nullam eget viverra enim. Integer a vel",
@@ -69,12 +69,19 @@ func TestFruitService_Create(t *testing.T) {
 			},
 		},
 		"should be success when bucketID is setted": {
-			mock: func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, mTime *mocks.MockTime) {
-				mTime.EXPECT().Now().Return(now)
-				repository.EXPECT().Create(gomock.Any()).DoAndReturn(func(arg0 *models.Fruit) error {
-					arg0.ID = 1
-					return nil
-				})
+			mock: func(db sqlmock.Sqlmock, logger *mocks.MockLogger, mTime *mocks.MockTime) {
+				mTime.EXPECT().Now().AnyTimes().Return(now)
+
+				bucketRows := sqlmock.NewRows([]string{"id", "name", "capacity"}).
+					AddRow(int64(1), "Testing", 1)
+
+				countTotalFruitsRows := sqlmock.NewRows([]string{"total"}).AddRow(int64(0))
+
+				db.ExpectBegin()
+				db.ExpectQuery("SELECT").WillReturnRows(bucketRows)               // find bucket
+				db.ExpectQuery("SELECT").WillReturnRows(countTotalFruitsRows)     // count fruits per bucket
+				db.ExpectExec("INSERT").WillReturnResult(sqlmock.NewResult(1, 1)) // create fruit with bucketID
+				db.ExpectCommit()
 			},
 			data: dtos.CreateFruitDto{
 				Name:      "Testing",
@@ -92,7 +99,7 @@ func TestFruitService_Create(t *testing.T) {
 			},
 		},
 		"should throw error on validate when name is greater than 128, price is lower than 0 and expiresIn is empty": {
-			mock: func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, mTime *mocks.MockTime) {},
+			mock: func(db sqlmock.Sqlmock, logger *mocks.MockLogger, mTime *mocks.MockTime) {},
 			data: dtos.CreateFruitDto{
 				Name:      "Testing lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris at ligula metus. Nullam eget viverra enim. Integer a veli",
 				Price:     decimal.NewFromInt32(-1),
@@ -105,7 +112,7 @@ func TestFruitService_Create(t *testing.T) {
 			}, ", "),
 		},
 		"should throw error on validate when name is empty": {
-			mock: func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, mTime *mocks.MockTime) {},
+			mock: func(db sqlmock.Sqlmock, logger *mocks.MockLogger, mTime *mocks.MockTime) {},
 			data: dtos.CreateFruitDto{
 				Name:      "",
 				Price:     decimal.NewFromFloat32(1.99),
@@ -114,9 +121,11 @@ func TestFruitService_Create(t *testing.T) {
 			wantErr: "Key: 'CreateFruitDto.Name' Error:Field validation for 'Name' failed on the 'required' tag",
 		},
 		"should throw error when bucket not found": {
-			mock: func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, mTime *mocks.MockTime) {
-				mTime.EXPECT().Now().Return(now)
-				repository.EXPECT().Create(gomock.Any()).Return(exceptions.NewForeignNotFoundException("Bucket not found"))
+			mock: func(db sqlmock.Sqlmock, logger *mocks.MockLogger, mTime *mocks.MockTime) {
+				mTime.EXPECT().Now().AnyTimes().Return(now)
+				db.ExpectBegin()
+				db.ExpectQuery("SELECT").WillReturnError(fmt.Errorf(infra.MYSQL_ERROR_NOT_FOUND)) // find bucket
+				db.ExpectRollback()
 				logger.EXPECT().Warn(gomock.Any())
 			},
 			data: dtos.CreateFruitDto{
@@ -128,9 +137,19 @@ func TestFruitService_Create(t *testing.T) {
 			wantErr: "Bucket not found",
 		},
 		"should throw error when bucket is full": {
-			mock: func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, mTime *mocks.MockTime) {
-				mTime.EXPECT().Now().Return(now)
-				repository.EXPECT().Create(gomock.Any()).Return(exceptions.NewForbiddenException("Bucket is full"))
+			mock: func(db sqlmock.Sqlmock, logger *mocks.MockLogger, mTime *mocks.MockTime) {
+				mTime.EXPECT().Now().AnyTimes().Return(now)
+
+				bucketRows := sqlmock.NewRows([]string{"id", "name", "capacity"}).
+					AddRow(int64(1), "Testing", 1)
+
+				countTotalFruitsRows := sqlmock.NewRows([]string{"total"}).AddRow(int64(1))
+
+				db.ExpectBegin()
+				db.ExpectQuery("SELECT").WillReturnRows(bucketRows)           // find bucket
+				db.ExpectQuery("SELECT").WillReturnRows(countTotalFruitsRows) // count fruits per bucket
+				db.ExpectRollback()
+
 				logger.EXPECT().Warn(gomock.Any())
 			},
 			data: dtos.CreateFruitDto{
@@ -141,10 +160,13 @@ func TestFruitService_Create(t *testing.T) {
 			},
 			wantErr: "Bucket is full",
 		},
-		"should throw error": {
-			mock: func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, mTime *mocks.MockTime) {
-				mTime.EXPECT().Now().Return(now)
-				repository.EXPECT().Create(gomock.Any()).Return(&mysql.MySQLError{Message: "error"})
+		"should throw error when insert": {
+			mock: func(db sqlmock.Sqlmock, logger *mocks.MockLogger, mTime *mocks.MockTime) {
+				mTime.EXPECT().Now().AnyTimes().Return(now)
+				db.ExpectBegin()
+				db.ExpectExec("INSERT").WillReturnError(fmt.Errorf("error")) // create fruit
+				db.ExpectRollback()
+
 				logger.EXPECT().Error(gomock.Any())
 			},
 			data: dtos.CreateFruitDto{
@@ -152,7 +174,32 @@ func TestFruitService_Create(t *testing.T) {
 				Price:     decimal.NewFromInt32(0),
 				ExpiresIn: &expiresIn,
 			},
-			wantErr: "Error 0: error",
+			wantErr: "error",
+		},
+		"should throw error when bucketID is setted on insert": {
+			mock: func(db sqlmock.Sqlmock, logger *mocks.MockLogger, mTime *mocks.MockTime) {
+				mTime.EXPECT().Now().AnyTimes().Return(now)
+
+				bucketRows := sqlmock.NewRows([]string{"id", "name", "capacity"}).
+					AddRow(int64(1), "Testing", 1)
+
+				countTotalFruitsRows := sqlmock.NewRows([]string{"total"}).AddRow(int64(0))
+
+				db.ExpectBegin()
+				db.ExpectQuery("SELECT").WillReturnRows(bucketRows)           // find bucket
+				db.ExpectQuery("SELECT").WillReturnRows(countTotalFruitsRows) // count fruits per bucket
+				db.ExpectExec("INSERT").WillReturnError(fmt.Errorf("error"))  // create fruit with bucketID
+				db.ExpectRollback()
+
+				logger.EXPECT().Error(gomock.Any())
+			},
+			data: dtos.CreateFruitDto{
+				Name:      "Testing",
+				Price:     decimal.NewFromInt32(0),
+				ExpiresIn: &expiresIn,
+				BucketID:  &bucketID,
+			},
+			wantErr: "error",
 		},
 	}
 	for name, tt := range tests {
@@ -163,16 +210,30 @@ func TestFruitService_Create(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			repositoryMock := mocks.NewMockFruitRepository(ctrl)
+			db, sqlMock, err := sqlmock.New()
+			require.Nil(t, err)
+			defer db.Close()
+
+			dialector := mysql.New(mysql.Config{
+				DSN:                       "sqlmock_db_0",
+				DriverName:                "mysql",
+				Conn:                      db,
+				SkipInitializeWithVersion: true,
+			})
+
+			gormDB, err := gorm.Open(dialector, &gorm.Config{})
+			require.Nil(t, err)
+			database := &infra.Database{DB: gormDB, SQL: db}
+
 			loggerMock := mocks.NewMockLogger(ctrl)
 			validate := infra.NewValidator()
 			timeMock := mocks.NewMockTime(ctrl)
 			_time = timeMock
 
-			tt.mock(repositoryMock, loggerMock, timeMock)
+			tt.mock(sqlMock, loggerMock, timeMock)
 
 			// given
-			service := NewFruit(repositoryMock, loggerMock, validate)
+			service := NewFruit(database, loggerMock, validate)
 
 			// when
 			got, err := service.Create(ctx, tt.data)
@@ -187,22 +248,38 @@ func TestFruitService_Create(t *testing.T) {
 }
 
 func TestFruitService_AddOnBucket(t *testing.T) {
+	now := time.Date(2000, 12, 31, 23, 59, 59, 0, time.Local)
+
 	tests := map[string]struct {
-		mock     func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, time *mocks.MockTime)
+		mock     func(db sqlmock.Sqlmock, logger *mocks.MockLogger, mTime *mocks.MockTime)
 		fruitID  int64
 		bucketID int64
 		wantErr  string
 	}{
 		"should be success when bucket exists and is not full": {
-			mock: func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, mTime *mocks.MockTime) {
-				repository.EXPECT().AddOnBucket(gomock.Any(), gomock.Any()).Return(nil)
+			mock: func(db sqlmock.Sqlmock, logger *mocks.MockLogger, mTime *mocks.MockTime) {
+				mTime.EXPECT().Now().AnyTimes().Return(now)
+
+				bucketRows := sqlmock.NewRows([]string{"id", "name", "capacity"}).
+					AddRow(int64(1), "Testing", 1)
+
+				countTotalFruitsRows := sqlmock.NewRows([]string{"total"}).AddRow(int64(0))
+
+				db.ExpectBegin()
+				db.ExpectQuery("SELECT").WillReturnRows(bucketRows)               // find bucket
+				db.ExpectQuery("SELECT").WillReturnRows(countTotalFruitsRows)     // count fruits per bucket
+				db.ExpectExec("UPDATE").WillReturnResult(sqlmock.NewResult(1, 1)) // update fruit with bucketID
+				db.ExpectCommit()
 			},
 			fruitID:  1,
 			bucketID: 1,
 		},
 		"should throw error when bucket not found": {
-			mock: func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, mTime *mocks.MockTime) {
-				repository.EXPECT().AddOnBucket(gomock.Any(), gomock.Any()).Return(exceptions.NewForeignNotFoundException("Bucket not found"))
+			mock: func(db sqlmock.Sqlmock, logger *mocks.MockLogger, mTime *mocks.MockTime) {
+				mTime.EXPECT().Now().Return(now)
+				db.ExpectBegin()
+				db.ExpectQuery("SELECT").WillReturnError(fmt.Errorf(infra.MYSQL_ERROR_NOT_FOUND)) // find bucket
+				db.ExpectRollback()
 				logger.EXPECT().Warn(gomock.Any())
 			},
 			fruitID:  1,
@@ -210,8 +287,19 @@ func TestFruitService_AddOnBucket(t *testing.T) {
 			wantErr:  "Bucket not found",
 		},
 		"should throw error when bucket is full": {
-			mock: func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, mTime *mocks.MockTime) {
-				repository.EXPECT().AddOnBucket(gomock.Any(), gomock.Any()).Return(exceptions.NewForbiddenException("Bucket is full"))
+			mock: func(db sqlmock.Sqlmock, logger *mocks.MockLogger, mTime *mocks.MockTime) {
+				mTime.EXPECT().Now().Return(now)
+
+				bucketRows := sqlmock.NewRows([]string{"id", "name", "capacity"}).
+					AddRow(int64(1), "Testing", 1)
+
+				countTotalFruitsRows := sqlmock.NewRows([]string{"total"}).AddRow(int64(1))
+
+				db.ExpectBegin()
+				db.ExpectQuery("SELECT").WillReturnRows(bucketRows)           // find bucket
+				db.ExpectQuery("SELECT").WillReturnRows(countTotalFruitsRows) // count fruits per bucket
+				db.ExpectRollback()
+
 				logger.EXPECT().Warn(gomock.Any())
 			},
 			fruitID:  1,
@@ -219,17 +307,59 @@ func TestFruitService_AddOnBucket(t *testing.T) {
 			wantErr:  "Bucket is full",
 		},
 		"should throw error when fruit not found": {
-			mock: func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, mTime *mocks.MockTime) {
-				repository.EXPECT().AddOnBucket(gomock.Any(), gomock.Any()).Return(exceptions.NewNotFoundException("Fruit not found"))
+			mock: func(db sqlmock.Sqlmock, logger *mocks.MockLogger, mTime *mocks.MockTime) {
+				mTime.EXPECT().Now().Return(now)
+
+				bucketRows := sqlmock.NewRows([]string{"id", "name", "capacity"}).
+					AddRow(int64(1), "Testing", 1)
+
+				countTotalFruitsRows := sqlmock.NewRows([]string{"total"}).AddRow(int64(0))
+
+				db.ExpectBegin()
+				db.ExpectQuery("SELECT").WillReturnRows(bucketRows)               // find bucket
+				db.ExpectQuery("SELECT").WillReturnRows(countTotalFruitsRows)     // count fruits per bucket
+				db.ExpectExec("UPDATE").WillReturnResult(sqlmock.NewResult(1, 0)) // not found on update fruit
+				db.ExpectRollback()
+
 				logger.EXPECT().Warn(gomock.Any())
 			},
 			fruitID:  1,
 			bucketID: 1,
 			wantErr:  "Fruit not found",
 		},
-		"should throw error": {
-			mock: func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, mTime *mocks.MockTime) {
-				repository.EXPECT().AddOnBucket(gomock.Any(), gomock.Any()).Return(fmt.Errorf("error"))
+		"should throw error on count fruits": {
+			mock: func(db sqlmock.Sqlmock, logger *mocks.MockLogger, mTime *mocks.MockTime) {
+				mTime.EXPECT().Now().Return(now)
+
+				bucketRows := sqlmock.NewRows([]string{"id", "name", "capacity"}).
+					AddRow(int64(1), "Testing", 1)
+
+				db.ExpectBegin()
+				db.ExpectQuery("SELECT").WillReturnRows(bucketRows)           // find bucket
+				db.ExpectQuery("SELECT").WillReturnError(fmt.Errorf("error")) // update fruit with bucketID
+				db.ExpectRollback()
+
+				logger.EXPECT().Error(gomock.Any())
+			},
+			fruitID:  1,
+			bucketID: 1,
+			wantErr:  "error",
+		},
+		"should throw error on update": {
+			mock: func(db sqlmock.Sqlmock, logger *mocks.MockLogger, mTime *mocks.MockTime) {
+				mTime.EXPECT().Now().Return(now)
+
+				bucketRows := sqlmock.NewRows([]string{"id", "name", "capacity"}).
+					AddRow(int64(1), "Testing", 1)
+
+				countTotalFruitsRows := sqlmock.NewRows([]string{"total"}).AddRow(int64(0))
+
+				db.ExpectBegin()
+				db.ExpectQuery("SELECT").WillReturnRows(bucketRows)           // find bucket
+				db.ExpectQuery("SELECT").WillReturnRows(countTotalFruitsRows) // count fruits per bucket
+				db.ExpectExec("UPDATE").WillReturnError(fmt.Errorf("error"))  // update fruit with bucketID
+				db.ExpectRollback()
+
 				logger.EXPECT().Error(gomock.Any())
 			},
 			fruitID:  1,
@@ -245,16 +375,32 @@ func TestFruitService_AddOnBucket(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			repositoryMock := mocks.NewMockFruitRepository(ctrl)
-			loggerMock := mocks.NewMockLogger(ctrl)
+			db, sqlMock, err := sqlmock.New()
+			require.Nil(t, err)
+			defer db.Close()
 
-			tt.mock(repositoryMock, loggerMock, nil)
+			dialector := mysql.New(mysql.Config{
+				DSN:                       "sqlmock_db_0",
+				DriverName:                "mysql",
+				Conn:                      db,
+				SkipInitializeWithVersion: true,
+			})
+
+			gormDB, err := gorm.Open(dialector, &gorm.Config{})
+			require.Nil(t, err)
+			database := &infra.Database{DB: gormDB, SQL: db}
+
+			loggerMock := mocks.NewMockLogger(ctrl)
+			timeMock := mocks.NewMockTime(ctrl)
+			_time = timeMock
+
+			tt.mock(sqlMock, loggerMock, timeMock)
 
 			// given
-			service := NewFruit(repositoryMock, loggerMock, nil)
+			service := NewFruit(database, loggerMock, nil)
 
 			// when
-			err := service.AddOnBucket(ctx, tt.fruitID, tt.bucketID)
+			err = service.AddOnBucket(ctx, tt.fruitID, tt.bucketID)
 
 			// then
 			if err != nil || tt.wantErr != "" {
@@ -266,26 +412,39 @@ func TestFruitService_AddOnBucket(t *testing.T) {
 
 func TestFruitService_RemoveFromBucket(t *testing.T) {
 	tests := map[string]struct {
-		mock     func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, time *mocks.MockTime)
-		fruitID  int64
-		bucketID int64
-		wantErr  string
+		mock    func(db sqlmock.Sqlmock, logger *mocks.MockLogger)
+		fruitID int64
+		wantErr string
 	}{
-		"should be success when bucket and fruits exist": {
-			mock: func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, mTime *mocks.MockTime) {
-				repository.EXPECT().RemoveFromBucket(gomock.Any(), gomock.Any()).Return(nil)
+		"should be success when fruits exist": {
+			mock: func(db sqlmock.Sqlmock, logger *mocks.MockLogger) {
+				db.ExpectBegin()
+				db.ExpectExec("UPDATE").WillReturnResult(sqlmock.NewResult(1, 1)) // update fruit
+				db.ExpectCommit()
 			},
-			fruitID:  1,
-			bucketID: 1,
+			fruitID: 1,
+		},
+		"should throw error when fruit not found": {
+			mock: func(db sqlmock.Sqlmock, logger *mocks.MockLogger) {
+				db.ExpectBegin()
+				db.ExpectExec("UPDATE").WillReturnResult(sqlmock.NewResult(1, 0)) // update fruit
+				db.ExpectCommit()
+
+				logger.EXPECT().Warn(gomock.Any())
+			},
+			fruitID: 1,
+			wantErr: "Fruit not found",
 		},
 		"should throw error": {
-			mock: func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, mTime *mocks.MockTime) {
-				repository.EXPECT().RemoveFromBucket(gomock.Any(), gomock.Any()).Return(fmt.Errorf("error"))
+			mock: func(db sqlmock.Sqlmock, logger *mocks.MockLogger) {
+				db.ExpectBegin()
+				db.ExpectExec("UPDATE").WillReturnError(fmt.Errorf("error")) // update fruit
+				db.ExpectRollback()
+
 				logger.EXPECT().Error(gomock.Any())
 			},
-			fruitID:  1,
-			bucketID: 1,
-			wantErr:  "error",
+			fruitID: 1,
+			wantErr: "error",
 		},
 	}
 	for name, tt := range tests {
@@ -296,16 +455,111 @@ func TestFruitService_RemoveFromBucket(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			repositoryMock := mocks.NewMockFruitRepository(ctrl)
+			db, sqlMock, err := sqlmock.New()
+			require.Nil(t, err)
+			defer db.Close()
+
+			dialector := mysql.New(mysql.Config{
+				DSN:                       "sqlmock_db_0",
+				DriverName:                "mysql",
+				Conn:                      db,
+				SkipInitializeWithVersion: true,
+			})
+
+			gormDB, err := gorm.Open(dialector, &gorm.Config{})
+			require.Nil(t, err)
+			database := &infra.Database{DB: gormDB, SQL: db}
+
 			loggerMock := mocks.NewMockLogger(ctrl)
 
-			tt.mock(repositoryMock, loggerMock, nil)
+			tt.mock(sqlMock, loggerMock)
 
 			// given
-			service := NewFruit(repositoryMock, loggerMock, nil)
+			service := NewFruit(database, loggerMock, nil)
 
 			// when
-			err := service.RemoveFromBucket(ctx, tt.fruitID, tt.bucketID)
+			err = service.RemoveFromBucket(ctx, tt.fruitID)
+
+			// then
+			if err != nil || tt.wantErr != "" {
+				assert.EqualError(t, err, tt.wantErr)
+			}
+		})
+	}
+}
+func TestFruitService_Delete(t *testing.T) {
+	now := time.Date(2000, 12, 31, 23, 59, 59, 0, time.Local)
+
+	tests := map[string]struct {
+		mock    func(db sqlmock.Sqlmock, logger *mocks.MockLogger, mTime *mocks.MockTime)
+		fruitID int64
+		wantErr string
+	}{
+		"should be success when fruit exists": {
+			mock: func(db sqlmock.Sqlmock, logger *mocks.MockLogger, mTime *mocks.MockTime) {
+				mTime.EXPECT().Now().Return(now)
+				db.ExpectBegin()
+				db.ExpectExec("UPDATE").WillReturnResult(sqlmock.NewResult(1, 1)) // update fruit
+				db.ExpectCommit()
+			},
+			fruitID: 1,
+		},
+		"should be success when fruit not exists": {
+			mock: func(db sqlmock.Sqlmock, logger *mocks.MockLogger, mTime *mocks.MockTime) {
+				mTime.EXPECT().Now().Return(now)
+				db.ExpectBegin()
+				db.ExpectExec("UPDATE").WillReturnResult(sqlmock.NewResult(1, 0)) // update fruit
+				db.ExpectCommit()
+			},
+			fruitID: 1,
+		},
+		"should throw error": {
+			mock: func(db sqlmock.Sqlmock, logger *mocks.MockLogger, mTime *mocks.MockTime) {
+				mTime.EXPECT().Now().Return(now)
+				db.ExpectBegin()
+				db.ExpectExec("UPDATE").WillReturnError(fmt.Errorf("error")) // update fruit
+				db.ExpectRollback()
+
+				logger.EXPECT().Error(gomock.Any())
+			},
+			fruitID: 1,
+			wantErr: "error",
+		},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			//setup
+			ctx := context.Background()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			db, sqlMock, err := sqlmock.New()
+			require.Nil(t, err)
+			defer db.Close()
+
+			dialector := mysql.New(mysql.Config{
+				DSN:                       "sqlmock_db_0",
+				DriverName:                "mysql",
+				Conn:                      db,
+				SkipInitializeWithVersion: true,
+			})
+
+			gormDB, err := gorm.Open(dialector, &gorm.Config{})
+			require.Nil(t, err)
+			database := &infra.Database{DB: gormDB, SQL: db}
+
+			loggerMock := mocks.NewMockLogger(ctrl)
+			timeMock := mocks.NewMockTime(ctrl)
+			_time = timeMock
+
+			tt.mock(sqlMock, loggerMock, timeMock)
+
+			// given
+			service := NewFruit(database, loggerMock, nil)
+
+			// when
+			err = service.Delete(ctx, tt.fruitID)
 
 			// then
 			if err != nil || tt.wantErr != "" {

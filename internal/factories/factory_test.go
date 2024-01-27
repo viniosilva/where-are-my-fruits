@@ -11,7 +11,7 @@ import (
 func TestFactory_Build(t *testing.T) {
 	t.Run("should be successful", func(t *testing.T) {
 		// when
-		got, err := Build(&infra.Database{DB: nil, SQL: nil}, nil, nil)
+		got, err := Build(&infra.Database{}, nil, nil)
 		require.Nil(t, err)
 
 		// then

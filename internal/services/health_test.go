@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/viniosilva/where-are-my-fruits/internal/infra"
 	"github.com/viniosilva/where-are-my-fruits/mocks"
 )
 
@@ -16,11 +19,10 @@ func TestHealthService_NewHealth(t *testing.T) {
 		ctrl := gomock.NewController(t)
 		defer ctrl.Finish()
 
-		repositoryMock := mocks.NewMockHealthRepository(ctrl)
 		loggerMock := mocks.NewMockLogger(ctrl)
 
 		// given
-		got := NewHealth(repositoryMock, loggerMock)
+		got := NewHealth(nil, loggerMock)
 
 		// then
 		assert.NotNil(t, got)
@@ -29,17 +31,17 @@ func TestHealthService_NewHealth(t *testing.T) {
 
 func TestHealthService_Check(t *testing.T) {
 	tests := map[string]struct {
-		mock    func(repository *mocks.MockHealthRepository, logger *mocks.MockLogger)
+		mock    func(db sqlmock.Sqlmock, logger *mocks.MockLogger)
 		wantErr string
 	}{
 		"should be success": {
-			mock: func(repository *mocks.MockHealthRepository, logger *mocks.MockLogger) {
-				repository.EXPECT().Ping(gomock.Any()).Return(nil)
+			mock: func(db sqlmock.Sqlmock, logger *mocks.MockLogger) {
+				db.ExpectPing()
 			},
 		},
 		"should throw error": {
-			mock: func(repository *mocks.MockHealthRepository, logger *mocks.MockLogger) {
-				repository.EXPECT().Ping(gomock.Any()).Return(fmt.Errorf("error"))
+			mock: func(db sqlmock.Sqlmock, logger *mocks.MockLogger) {
+				db.ExpectPing().WillReturnError(fmt.Errorf("error"))
 				logger.EXPECT().Error(gomock.Any())
 			},
 			wantErr: "error",
@@ -53,15 +55,19 @@ func TestHealthService_Check(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			repositoryMock := mocks.NewMockHealthRepository(ctrl)
+			db, sqlMock, err := sqlmock.New(sqlmock.MonitorPingsOption(true))
+			require.Nil(t, err)
+			defer db.Close()
+			database := &infra.Database{DB: nil, SQL: db}
+
 			loggerMock := mocks.NewMockLogger(ctrl)
-			tt.mock(repositoryMock, loggerMock)
+			tt.mock(sqlMock, loggerMock)
 
 			// given
-			service := NewHealth(repositoryMock, loggerMock)
+			service := NewHealth(database, loggerMock)
 
 			// when
-			err := service.Check(ctx)
+			err = service.Check(ctx)
 
 			// then
 			if err != nil || tt.wantErr != "" {

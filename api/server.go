@@ -25,6 +25,7 @@ type FruitController interface {
 	Create(ctx *gin.Context)
 	AddOnBucket(ctx *gin.Context)
 	RemoveFromBucket(ctx *gin.Context)
+	Delete(ctx *gin.Context)
 }
 
 // @title			Where are my fruits API
@@ -51,6 +52,7 @@ func ConfigGin(host, port string, logger *zap.SugaredLogger, health HealthContro
 	r.POST("/api/v1/fruits", fruit.Create)
 	r.POST("/api/v1/fruits/:fruitID/buckets/:bucketID", fruit.AddOnBucket)
 	r.DELETE("/api/v1/fruits/:fruitID/buckets/:bucketID", fruit.RemoveFromBucket)
+	r.DELETE("/api/v1/fruits/:fruitID", fruit.Delete)
 
 	return r
 }
