@@ -21,7 +21,7 @@ func NewBucket(service BucketService) *BucketController {
 	}
 }
 
-// HealthCheck godoc
+// Bucket godoc
 // @Summary create bucket
 // @Schemes
 // @Tags bucket

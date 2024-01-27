@@ -23,6 +23,7 @@ type BucketController interface {
 
 type FruitController interface {
 	Create(ctx *gin.Context)
+	AddOnBucket(ctx *gin.Context)
 }
 
 // @title			Where are my fruits API
@@ -47,6 +48,7 @@ func ConfigGin(host, port string, logger *zap.SugaredLogger, health HealthContro
 	r.POST("/api/v1/buckets", bucket.Create)
 
 	r.POST("/api/v1/fruits", fruit.Create)
+	r.POST("/api/v1/fruits/:fruitID/buckets/:bucketID", fruit.AddOnBucket)
 
 	return r
 }

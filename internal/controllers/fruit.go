@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -21,7 +22,7 @@ func NewFruit(service FruitService) *FruitController {
 	}
 }
 
-// HealthCheck godoc
+// Fruit godoc
 // @Summary create fruit
 // @Schemes
 // @Tags fruit
@@ -54,7 +55,7 @@ func (impl *FruitController) Create(ctx *gin.Context) {
 			ctx.JSON(http.StatusBadRequest, presenters.ErrorRes{Error: e.Name, Messages: e.Errors})
 			return
 		}
-		if e, ok := err.(*exceptions.ForeignDoesntExistsException); ok {
+		if e, ok := err.(*exceptions.ForeignNotFoundException); ok {
 			ctx.JSON(http.StatusBadRequest, presenters.ErrorRes{Error: e.Name, Message: e.Error()})
 			return
 		}
@@ -69,6 +70,53 @@ func (impl *FruitController) Create(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusCreated, impl.parse(res))
 
+}
+
+// Fruit godoc
+// @Summary add fruit on bucket
+// @Schemes
+// @Tags fruit
+// @Accept json
+// @Produce json
+// @Param fruitID path int64 true "Fruit ID"
+// @Param bucketID path int64 true "Bucket ID"
+// @Success 200 {object} nil
+// @Failure 400 {object} presenters.ErrorRes
+// @Failure 500 {object} presenters.ErrorRes
+// @Router /v1/fruits/{fruitID}/buckets/{bucketID} [post]
+func (impl *FruitController) AddOnBucket(ctx *gin.Context) {
+	fruitID, err := strconv.ParseInt(ctx.Param("fruitID"), 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, presenters.ErrorRes{Error: exceptions.ValidationExceptionName, Message: "invalid fruitID"})
+		return
+	}
+
+	bucketID, err := strconv.ParseInt(ctx.Param("bucketID"), 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, presenters.ErrorRes{Error: exceptions.ValidationExceptionName, Message: "invalid bucketID"})
+		return
+	}
+
+	err = impl.service.AddOnBucket(ctx, fruitID, bucketID)
+	if err != nil {
+		if e, ok := err.(*exceptions.ForeignNotFoundException); ok {
+			ctx.JSON(http.StatusBadRequest, presenters.ErrorRes{Error: e.Name, Message: e.Error()})
+			return
+		}
+		if e, ok := err.(*exceptions.ForbiddenException); ok {
+			ctx.JSON(http.StatusBadRequest, presenters.ErrorRes{Error: e.Name, Message: e.Error()})
+			return
+		}
+		if e, ok := err.(*exceptions.NotFoundException); ok {
+			ctx.JSON(http.StatusBadRequest, presenters.ErrorRes{Error: e.Name, Message: e.Error()})
+			return
+		}
+
+		ctx.JSON(http.StatusInternalServerError, presenters.ErrorRes{Error: http.StatusText(http.StatusInternalServerError)})
+		return
+	}
+
+	ctx.Status(http.StatusOK)
 }
 
 func (impl *FruitController) parse(fruit *models.Fruit) presenters.FruitRes {

@@ -42,7 +42,7 @@ func (impl *FruitService) Create(ctx context.Context, data dtos.CreateFruitDto) 
 	err := impl.repository.Create(&fruit)
 
 	if err != nil {
-		if _, ok := err.(*exceptions.ForeignDoesntExistsException); ok {
+		if _, ok := err.(*exceptions.ForeignNotFoundException); ok {
 			impl.logger.Warn(err.Error())
 		} else if _, ok := err.(*exceptions.ForbiddenException); ok {
 			impl.logger.Warn(err.Error())
@@ -54,4 +54,24 @@ func (impl *FruitService) Create(ctx context.Context, data dtos.CreateFruitDto) 
 	}
 
 	return &fruit, err
+}
+
+func (impl *FruitService) AddOnBucket(ctx context.Context, fruitID, bucketID int64) error {
+	err := impl.repository.AddOnBucket(fruitID, bucketID)
+
+	if err != nil {
+		if _, ok := err.(*exceptions.ForeignNotFoundException); ok {
+			impl.logger.Warn(err.Error())
+		} else if _, ok := err.(*exceptions.ForbiddenException); ok {
+			impl.logger.Warn(err.Error())
+		} else if _, ok := err.(*exceptions.NotFoundException); ok {
+			impl.logger.Warn(err.Error())
+		} else {
+			impl.logger.Error(err.Error())
+		}
+
+		return err
+	}
+
+	return nil
 }

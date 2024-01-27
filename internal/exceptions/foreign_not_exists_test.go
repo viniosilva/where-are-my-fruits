@@ -6,11 +6,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestForeignDoesntExistsException(t *testing.T) {
+func TestForeignNotExistsException(t *testing.T) {
 	t.Run("should be an error", func(t *testing.T) {
-		got := NewForeignDoesntExistsException("error")
+		got := NewForeignNotFoundException("error")
 
-		assert.Equal(t, ForeignDoesntExistsExceptionName, got.Name)
+		assert.Equal(t, ForeignNotFoundExceptionName, got.Name)
 		assert.Equal(t, "error", got.Error())
 	})
 

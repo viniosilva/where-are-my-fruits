@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -15,7 +16,6 @@ import (
 	"github.com/viniosilva/where-are-my-fruits/internal/infra"
 	"github.com/viniosilva/where-are-my-fruits/internal/models"
 	"github.com/viniosilva/where-are-my-fruits/mocks"
-	"gorm.io/gorm"
 )
 
 func TestFruitService_NewFruit(t *testing.T) {
@@ -50,9 +50,9 @@ func TestFruitService_Create(t *testing.T) {
 		"should be success when name is 128 length, price is 0 and expires in 1 second": {
 			mock: func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, mTime *mocks.MockTime) {
 				mTime.EXPECT().Now().Return(now)
-				repository.EXPECT().Create(gomock.Any()).DoAndReturn(func(arg0 *models.Fruit) *gorm.DB {
+				repository.EXPECT().Create(gomock.Any()).DoAndReturn(func(arg0 *models.Fruit) error {
 					arg0.ID = 1
-					return &gorm.DB{RowsAffected: 1}
+					return nil
 				})
 			},
 			data: dtos.CreateFruitDto{
@@ -71,9 +71,9 @@ func TestFruitService_Create(t *testing.T) {
 		"should be success when bucketID is setted": {
 			mock: func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, mTime *mocks.MockTime) {
 				mTime.EXPECT().Now().Return(now)
-				repository.EXPECT().Create(gomock.Any()).DoAndReturn(func(arg0 *models.Fruit) *gorm.DB {
+				repository.EXPECT().Create(gomock.Any()).DoAndReturn(func(arg0 *models.Fruit) error {
 					arg0.ID = 1
-					return &gorm.DB{RowsAffected: 1}
+					return nil
 				})
 			},
 			data: dtos.CreateFruitDto{
@@ -113,10 +113,10 @@ func TestFruitService_Create(t *testing.T) {
 			},
 			wantErr: "Key: 'CreateFruitDto.Name' Error:Field validation for 'Name' failed on the 'required' tag",
 		},
-		"should throw error when bucket not exists": {
+		"should throw error when bucket not found": {
 			mock: func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, mTime *mocks.MockTime) {
 				mTime.EXPECT().Now().Return(now)
-				repository.EXPECT().Create(gomock.Any()).Return(exceptions.NewForeignDoesntExistsException("Bucket doesn't exists"))
+				repository.EXPECT().Create(gomock.Any()).Return(exceptions.NewForeignNotFoundException("Bucket not found"))
 				logger.EXPECT().Warn(gomock.Any())
 			},
 			data: dtos.CreateFruitDto{
@@ -125,7 +125,7 @@ func TestFruitService_Create(t *testing.T) {
 				ExpiresIn: &expiresIn,
 				BucketID:  &bucketID,
 			},
-			wantErr: "Bucket doesn't exists",
+			wantErr: "Bucket not found",
 		},
 		"should throw error when bucket is full": {
 			mock: func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, mTime *mocks.MockTime) {
@@ -179,6 +179,84 @@ func TestFruitService_Create(t *testing.T) {
 
 			// then
 			assert.Equal(t, tt.want, got)
+			if err != nil || tt.wantErr != "" {
+				assert.EqualError(t, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestFruitService_AddOnBucket(t *testing.T) {
+	tests := map[string]struct {
+		mock     func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, time *mocks.MockTime)
+		fruitID  int64
+		bucketID int64
+		wantErr  string
+	}{
+		"should be success when bucket exists and is not full": {
+			mock: func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, mTime *mocks.MockTime) {
+				repository.EXPECT().AddOnBucket(gomock.Any(), gomock.Any()).Return(nil)
+			},
+			fruitID:  1,
+			bucketID: 1,
+		},
+		"should throw error when bucket not found": {
+			mock: func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, mTime *mocks.MockTime) {
+				repository.EXPECT().AddOnBucket(gomock.Any(), gomock.Any()).Return(exceptions.NewForeignNotFoundException("Bucket not found"))
+				logger.EXPECT().Warn(gomock.Any())
+			},
+			fruitID:  1,
+			bucketID: 1,
+			wantErr:  "Bucket not found",
+		},
+		"should throw error when bucket is full": {
+			mock: func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, mTime *mocks.MockTime) {
+				repository.EXPECT().AddOnBucket(gomock.Any(), gomock.Any()).Return(exceptions.NewForbiddenException("Bucket is full"))
+				logger.EXPECT().Warn(gomock.Any())
+			},
+			fruitID:  1,
+			bucketID: 1,
+			wantErr:  "Bucket is full",
+		},
+		"should throw error when fruit not found": {
+			mock: func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, mTime *mocks.MockTime) {
+				repository.EXPECT().AddOnBucket(gomock.Any(), gomock.Any()).Return(exceptions.NewNotFoundException("Fruit not found"))
+				logger.EXPECT().Warn(gomock.Any())
+			},
+			fruitID:  1,
+			bucketID: 1,
+			wantErr:  "Fruit not found",
+		},
+		"should throw error": {
+			mock: func(repository *mocks.MockFruitRepository, logger *mocks.MockLogger, mTime *mocks.MockTime) {
+				repository.EXPECT().AddOnBucket(gomock.Any(), gomock.Any()).Return(fmt.Errorf("error"))
+				logger.EXPECT().Error(gomock.Any())
+			},
+			fruitID:  1,
+			bucketID: 1,
+			wantErr:  "error",
+		},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			//setup
+			ctx := context.Background()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			repositoryMock := mocks.NewMockFruitRepository(ctrl)
+			loggerMock := mocks.NewMockLogger(ctrl)
+
+			tt.mock(repositoryMock, loggerMock, nil)
+
+			// given
+			service := NewFruit(repositoryMock, loggerMock, nil)
+
+			// when
+			err := service.AddOnBucket(ctx, tt.fruitID, tt.bucketID)
+
+			// then
 			if err != nil || tt.wantErr != "" {
 				assert.EqualError(t, err, tt.wantErr)
 			}

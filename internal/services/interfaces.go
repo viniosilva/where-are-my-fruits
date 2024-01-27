@@ -33,4 +33,5 @@ type BucketRepository interface {
 
 type FruitRepository interface {
 	Create(data *models.Fruit) error
+	AddOnBucket(fruitID, bucketID int64) error
 }

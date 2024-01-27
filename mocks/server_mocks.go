@@ -104,6 +104,18 @@ func (m *MockFruitController) EXPECT() *MockFruitControllerMockRecorder {
 	return m.recorder
 }
 
+// AddOnBucket mocks base method.
+func (m *MockFruitController) AddOnBucket(ctx *gin.Context) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "AddOnBucket", ctx)
+}
+
+// AddOnBucket indicates an expected call of AddOnBucket.
+func (mr *MockFruitControllerMockRecorder) AddOnBucket(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddOnBucket", reflect.TypeOf((*MockFruitController)(nil).AddOnBucket), ctx)
+}
+
 // Create mocks base method.
 func (m *MockFruitController) Create(ctx *gin.Context) {
 	m.ctrl.T.Helper()

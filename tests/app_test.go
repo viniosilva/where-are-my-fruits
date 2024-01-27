@@ -3,6 +3,7 @@ package controller
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -44,7 +45,7 @@ func TestApp(t *testing.T) {
 
 		createBucketReq := presenters.CreateBucketReq{
 			Name:     "Testing",
-			Capacity: 1,
+			Capacity: 2,
 		}
 
 		price, _ := decimal.NewFromString("1.99")
@@ -57,11 +58,12 @@ func TestApp(t *testing.T) {
 		// cases
 		getHealth(t, r)
 
-		bucket := postBucket(t, r, createBucketReq)
-		postFruit(t, r, createFruitReq)
+		bucket := createBucket(t, r, createBucketReq)
+		fruit := createFruit(t, r, createFruitReq)
+		addFruitOnBucket(t, r, fruit.ID, bucket.ID)
 
 		createFruitReq.BucketID = &bucket.ID
-		postFruit(t, r, createFruitReq)
+		createFruit(t, r, createFruitReq)
 	})
 }
 
@@ -87,12 +89,12 @@ func getHealth(t *testing.T, r *gin.Engine) {
 	assert.Equal(t, wantBody, got)
 }
 
-func postBucket(t *testing.T, r *gin.Engine, data presenters.CreateBucketReq) presenters.BucketRes {
+func createBucket(t *testing.T, r *gin.Engine, data presenters.CreateBucketReq) presenters.BucketRes {
 	// given
 	wantCode := http.StatusCreated
 	wantBody := presenters.BucketRes{
 		Name:     "Testing",
-		Capacity: 1,
+		Capacity: 2,
 	}
 
 	body, _ := json.Marshal(data)
@@ -117,7 +119,7 @@ func postBucket(t *testing.T, r *gin.Engine, data presenters.CreateBucketReq) pr
 	return got
 }
 
-func postFruit(t *testing.T, r *gin.Engine, data presenters.CreateFruitReq) presenters.FruitRes {
+func createFruit(t *testing.T, r *gin.Engine, data presenters.CreateFruitReq) presenters.FruitRes {
 	// given
 	price, _ := decimal.NewFromString("1.99")
 	wantCode := http.StatusCreated
@@ -148,6 +150,21 @@ func postFruit(t *testing.T, r *gin.Engine, data presenters.CreateFruitReq) pres
 	assert.Equal(t, wantBody, got)
 
 	return got
+}
+
+func addFruitOnBucket(t *testing.T, r *gin.Engine, fruitID, bucketID int64) {
+	// given
+	wantCode := http.StatusOK
+
+	path := fmt.Sprintf("/api/v1/fruits/%d/buckets/%d", fruitID, bucketID)
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", path, nil)
+
+	// when
+	r.ServeHTTP(w, req)
+
+	// then
+	assert.Equal(t, wantCode, w.Code)
 }
 
 // Refers: https://gin-gonic.com/docs/testing

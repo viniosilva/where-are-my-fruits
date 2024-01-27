@@ -113,9 +113,9 @@ func TestFruitController_Create(t *testing.T) {
 				},
 			},
 		},
-		"should throw foreign doesn't exists exception": {
+		"should throw foreign not found exception": {
 			mock: func(service *mocks.MockFruitService) {
-				service.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil, exceptions.NewForeignDoesntExistsException("Bucket doesn't exists"))
+				service.EXPECT().Create(gomock.Any(), gomock.Any()).Return(nil, exceptions.NewForeignNotFoundException("Bucket not found"))
 			},
 			body: presenters.CreateFruitReq{
 				Name:      "Testing",
@@ -126,7 +126,7 @@ func TestFruitController_Create(t *testing.T) {
 			wantCode: http.StatusBadRequest,
 			wantBodyErr: presenters.ErrorRes{
 				Error:   exceptions.ValidationExceptionName,
-				Message: "Bucket doesn't exists",
+				Message: "Bucket not found",
 			},
 		},
 		"should throw forbidden exception": {
@@ -190,6 +190,124 @@ func TestFruitController_Create(t *testing.T) {
 				return
 			}
 			assert.Equal(t, tt.wantBody, got)
+		})
+	}
+}
+
+func TestFruitController_AddOnBucket(t *testing.T) {
+	tests := map[string]struct {
+		mock          func(service *mocks.MockFruitService)
+		fruitIDParam  string
+		bucketIDParam string
+		wantCode      int
+		wantBodyErr   presenters.ErrorRes
+	}{
+		"should be success": {
+			mock: func(service *mocks.MockFruitService) {
+				service.EXPECT().AddOnBucket(gomock.Any(), int64(1), int64(1)).Return(nil)
+			},
+			fruitIDParam:  "1",
+			bucketIDParam: "1",
+			wantCode:      http.StatusOK,
+		},
+		"should throw validation exception when fruitID is invalid": {
+			mock:          func(service *mocks.MockFruitService) {},
+			fruitIDParam:  "invalid",
+			bucketIDParam: "1",
+			wantCode:      http.StatusBadRequest,
+			wantBodyErr: presenters.ErrorRes{
+				Error:   exceptions.ValidationExceptionName,
+				Message: "invalid fruitID",
+			},
+		},
+		"should throw validation exception when bucketID is invalid": {
+			mock:          func(service *mocks.MockFruitService) {},
+			fruitIDParam:  "1",
+			bucketIDParam: "invalid",
+			wantCode:      http.StatusBadRequest,
+			wantBodyErr: presenters.ErrorRes{
+				Error:   exceptions.ValidationExceptionName,
+				Message: "invalid bucketID",
+			},
+		},
+		"should throw foreign not found exception": {
+			mock: func(service *mocks.MockFruitService) {
+				service.EXPECT().AddOnBucket(gomock.Any(), gomock.Any(), gomock.Any()).Return(exceptions.NewForeignNotFoundException("Bucket not found"))
+			},
+			fruitIDParam:  "1",
+			bucketIDParam: "1",
+			wantCode:      http.StatusBadRequest,
+			wantBodyErr: presenters.ErrorRes{
+				Error:   exceptions.ValidationExceptionName,
+				Message: "Bucket not found",
+			},
+		},
+		"should throw forbidden exception": {
+			mock: func(service *mocks.MockFruitService) {
+				service.EXPECT().AddOnBucket(gomock.Any(), gomock.Any(), gomock.Any()).Return(exceptions.NewForbiddenException("Bucket is full"))
+			},
+			fruitIDParam:  "1",
+			bucketIDParam: "1",
+			wantCode:      http.StatusBadRequest,
+			wantBodyErr: presenters.ErrorRes{
+				Error:   exceptions.ValidationExceptionName,
+				Message: "Bucket is full",
+			},
+		},
+		"should throw not found exception": {
+			mock: func(service *mocks.MockFruitService) {
+				service.EXPECT().AddOnBucket(gomock.Any(), gomock.Any(), gomock.Any()).Return(exceptions.NewNotFoundException("Fruit not found"))
+			},
+			fruitIDParam:  "1",
+			bucketIDParam: "1",
+			wantCode:      http.StatusBadRequest,
+			wantBodyErr: presenters.ErrorRes{
+				Error:   exceptions.NotFoundExceptionName,
+				Message: "Fruit not found",
+			},
+		},
+		"should throw internal server error": {
+			mock: func(service *mocks.MockFruitService) {
+				service.EXPECT().AddOnBucket(gomock.Any(), gomock.Any(), gomock.Any()).Return(fmt.Errorf("error"))
+			},
+			fruitIDParam:  "1",
+			bucketIDParam: "1",
+			wantCode:      http.StatusInternalServerError,
+			wantBodyErr:   presenters.ErrorRes{Error: http.StatusText(http.StatusInternalServerError)},
+		},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			// setup
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			serviceMock := mocks.NewMockFruitService(ctrl)
+			tt.mock(serviceMock)
+
+			r := gin.Default()
+			controller := NewFruit(serviceMock)
+
+			r.POST("/api/v1/fruits/:fruitID/buckets/:bucketID", controller.AddOnBucket)
+
+			var gotErr presenters.ErrorRes
+
+			// given
+			path := fmt.Sprintf("/api/v1/fruits/%s/buckets/%s", tt.fruitIDParam, tt.bucketIDParam)
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest("POST", path, nil)
+
+			// when
+			r.ServeHTTP(w, req)
+
+			errBodyErr := json.Unmarshal(w.Body.Bytes(), &gotErr)
+
+			// then
+			assert.Equal(t, tt.wantCode, w.Code)
+
+			if errBodyErr != nil {
+				assert.Equal(t, tt.wantBodyErr, gotErr)
+				return
+			}
 		})
 	}
 }

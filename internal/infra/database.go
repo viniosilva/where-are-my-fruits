@@ -9,7 +9,10 @@ import (
 	"gorm.io/gorm"
 )
 
-const MYSQL_ERROR_FOREIGN_DOESNT_EXISTS uint16 = 1452
+const (
+	MYSQL_ERROR_FOREIGN_NOT_EXISTS uint16 = 1452
+	MYSQL_ERROR_NOT_FOUND                 = "record not found"
+)
 
 type Database struct {
 	DB  *gorm.DB
