@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"github.com/golang/mock/gomock"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/viniosilva/where-are-my-fruits/internal/controllers/presenters"
 	"github.com/viniosilva/where-are-my-fruits/internal/dtos"
@@ -101,6 +102,92 @@ func TestBucketController_Create(t *testing.T) {
 			body, _ := json.Marshal(tt.body)
 			w := httptest.NewRecorder()
 			req, _ := http.NewRequest("POST", path, bytes.NewReader(body))
+
+			// when
+			r.ServeHTTP(w, req)
+
+			errBodyErr := json.Unmarshal(w.Body.Bytes(), &gotErr)
+			json.Unmarshal(w.Body.Bytes(), &got)
+
+			// then
+			assert.Equal(t, tt.wantCode, w.Code)
+
+			if errBodyErr != nil {
+				assert.Equal(t, tt.wantBodyErr, gotErr)
+				return
+			}
+			assert.Equal(t, tt.wantBody, got)
+		})
+	}
+}
+
+func TestBucketController_List(t *testing.T) {
+	tests := map[string]struct {
+		mock          func(service *mocks.MockBucketService)
+		pageQuery     int
+		pageSizeQuery int
+		wantCode      int
+		wantBody      presenters.BucketsFruitsRes
+		wantBodyErr   presenters.ErrorRes
+	}{
+		"should be success": {
+			mock: func(service *mocks.MockBucketService) {
+				service.EXPECT().List(gomock.Any(), 1, 5).Return([]models.BucketFruits{
+					{
+						ID:          1,
+						Name:        "Testing",
+						Capacity:    1,
+						TotalFruits: 1,
+						TotalPrice:  decimal.NewFromFloat32(4.55),
+						Percent:     decimal.NewFromInt32(100),
+					},
+				}, nil)
+			},
+			pageQuery:     1,
+			pageSizeQuery: 5,
+			wantCode:      http.StatusOK,
+			wantBody: presenters.BucketsFruitsRes{
+				Data: []presenters.BucketFruitsRes{
+					{
+						ID:          1,
+						Name:        "Testing",
+						Capacity:    1,
+						TotalFruits: 1,
+						TotalPrice:  decimal.NewFromFloat32(4.55),
+						Percent:     "100.00%",
+					},
+				},
+			},
+		},
+		"should throw internal server error": {
+			mock: func(service *mocks.MockBucketService) {
+				service.EXPECT().List(gomock.Any(), 1, 10).Return(nil, fmt.Errorf("error"))
+			},
+			wantCode:    http.StatusInternalServerError,
+			wantBodyErr: presenters.ErrorRes{Error: http.StatusText(http.StatusInternalServerError)},
+		},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			// setup
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			serviceMock := mocks.NewMockBucketService(ctrl)
+			tt.mock(serviceMock)
+
+			r := gin.Default()
+			controller := NewBucket(serviceMock)
+
+			path := "/api/v1/buckets"
+			r.GET(path, controller.List)
+
+			var got presenters.BucketsFruitsRes
+			var gotErr presenters.ErrorRes
+
+			// given
+			path = fmt.Sprintf("%s?page=%d&pageSize=%d", path, tt.pageQuery, tt.pageSizeQuery)
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest("GET", path, nil)
 
 			// when
 			r.ServeHTTP(w, req)

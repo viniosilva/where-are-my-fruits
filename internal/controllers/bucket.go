@@ -53,8 +53,43 @@ func (impl *BucketController) Create(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, impl.parse(res))
+	ctx.JSON(http.StatusCreated, impl.parseModel(res))
+}
 
+// Bucket godoc
+// @Summary list buckets
+// @Schemes
+// @Tags bucket
+// @Accept json
+// @Produce json
+// @Param page query int false "page" default(1)
+// @Param pageSize query int false "pageSize" default(10)
+// @Success 200 {object} presenters.BucketsRes
+// @Failure 500 {object} presenters.ErrorRes
+// @Router /v1/buckets [get]
+func (impl *BucketController) List(ctx *gin.Context) {
+	page, err := strconv.Atoi(ctx.Query("page"))
+	if err != nil || page < 1 {
+		page = 1
+	}
+
+	pageSize, err := strconv.Atoi(ctx.Query("pageSize"))
+	if err != nil || pageSize < 1 {
+		pageSize = 10
+	}
+
+	res, err := impl.service.List(ctx, page, pageSize)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, presenters.ErrorRes{Error: http.StatusText(http.StatusInternalServerError)})
+		return
+	}
+
+	resp := presenters.BucketsFruitsRes{Data: []presenters.BucketFruitsRes{}}
+	for _, bucket := range res {
+		resp.Data = append(resp.Data, impl.parseDTO(&bucket))
+	}
+
+	ctx.JSON(http.StatusOK, resp)
 }
 
 // Fruit godoc
@@ -89,11 +124,22 @@ func (impl *BucketController) Delete(ctx *gin.Context) {
 	ctx.Status(http.StatusOK)
 }
 
-func (impl *BucketController) parse(bucket *models.Bucket) presenters.BucketRes {
+func (impl *BucketController) parseModel(bucket *models.Bucket) presenters.BucketRes {
 	return presenters.BucketRes{
 		ID:        bucket.ID,
 		CreatedAt: bucket.CreatedAt.Format(time.DateTime),
 		Name:      bucket.Name,
 		Capacity:  bucket.Capacity,
+	}
+}
+
+func (impl *BucketController) parseDTO(bucket *models.BucketFruits) presenters.BucketFruitsRes {
+	return presenters.BucketFruitsRes{
+		ID:          bucket.ID,
+		Name:        bucket.Name,
+		Capacity:    bucket.Capacity,
+		TotalFruits: bucket.TotalFruits,
+		TotalPrice:  bucket.TotalPrice,
+		Percent:     bucket.Percent.StringFixed(2) + "%",
 	}
 }

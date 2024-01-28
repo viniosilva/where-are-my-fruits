@@ -102,6 +102,21 @@ func (mr *MockBucketServiceMockRecorder) Delete(ctx, id interface{}) *gomock.Cal
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockBucketService)(nil).Delete), ctx, id)
 }
 
+// List mocks base method.
+func (m *MockBucketService) List(ctx context.Context, page, pageSize int) ([]models.BucketFruits, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "List", ctx, page, pageSize)
+	ret0, _ := ret[0].([]models.BucketFruits)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// List indicates an expected call of List.
+func (mr *MockBucketServiceMockRecorder) List(ctx, page, pageSize interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockBucketService)(nil).List), ctx, page, pageSize)
+}
+
 // MockFruitService is a mock of FruitService interface.
 type MockFruitService struct {
 	ctrl     *gomock.Controller

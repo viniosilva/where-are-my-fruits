@@ -14,6 +14,7 @@ type HealthService interface {
 
 type BucketService interface {
 	Create(ctx context.Context, data dtos.CreateBucketDto) (*models.Bucket, error)
+	List(ctx context.Context, page, pageSize int) ([]models.BucketFruits, error)
 	Delete(ctx context.Context, id int64) error
 }
 

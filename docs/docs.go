@@ -44,6 +44,48 @@ const docTemplate = `{
             }
         },
         "/v1/buckets": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bucket"
+                ],
+                "summary": "list buckets",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "page",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "pageSize",
+                        "name": "pageSize",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.BucketsRes"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.ErrorRes"
+                        }
+                    }
+                }
+            },
             "post": {
                 "consumes": [
                     "application/json"
@@ -72,6 +114,46 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/presenters.BucketRes"
                         }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.ErrorRes"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/presenters.ErrorRes"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/buckets/{bucketID}": {
+            "delete": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bucket"
+                ],
+                "summary": "delete bucket",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Bucket ID",
+                        "name": "bucketID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
                     },
                     "400": {
                         "description": "Bad Request",
@@ -262,6 +344,35 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "presenters.BucketDtoRes": {
+            "type": "object",
+            "properties": {
+                "capacity": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "name": {
+                    "type": "string",
+                    "example": "A"
+                },
+                "percent": {
+                    "type": "string",
+                    "example": "50%"
+                },
+                "total_fruit": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "total_price": {
+                    "type": "number",
+                    "example": 23.54
+                }
+            }
+        },
         "presenters.BucketRes": {
             "type": "object",
             "properties": {
@@ -284,6 +395,17 @@ const docTemplate = `{
                 "name": {
                     "type": "string",
                     "example": "A"
+                }
+            }
+        },
+        "presenters.BucketsRes": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/presenters.BucketDtoRes"
+                    }
                 }
             }
         },

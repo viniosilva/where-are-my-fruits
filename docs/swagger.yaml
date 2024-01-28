@@ -1,4 +1,25 @@
 definitions:
+  presenters.BucketDtoRes:
+    properties:
+      capacity:
+        example: 10
+        type: integer
+      id:
+        example: 1
+        type: integer
+      name:
+        example: A
+        type: string
+      percent:
+        example: 50%
+        type: string
+      total_fruit:
+        example: 5
+        type: integer
+      total_price:
+        example: 23.54
+        type: number
+    type: object
   presenters.BucketRes:
     properties:
       capacity:
@@ -16,6 +37,13 @@ definitions:
       name:
         example: A
         type: string
+    type: object
+  presenters.BucketsRes:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/presenters.BucketDtoRes'
+        type: array
     type: object
   presenters.CreateBucketReq:
     properties:
@@ -118,6 +146,34 @@ paths:
       tags:
       - health
   /v1/buckets:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - default: 1
+        description: page
+        in: query
+        name: page
+        type: integer
+      - default: 10
+        description: pageSize
+        in: query
+        name: pageSize
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/presenters.BucketsRes'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/presenters.ErrorRes'
+      summary: list buckets
+      tags:
+      - bucket
     post:
       consumes:
       - application/json
@@ -144,6 +200,32 @@ paths:
           schema:
             $ref: '#/definitions/presenters.ErrorRes'
       summary: create bucket
+      tags:
+      - bucket
+  /v1/buckets/{bucketID}:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Bucket ID
+        in: path
+        name: bucketID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/presenters.ErrorRes'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/presenters.ErrorRes'
+      summary: delete bucket
       tags:
       - bucket
   /v1/fruits:

@@ -45,6 +45,55 @@ func (impl *BucketService) Create(ctx context.Context, data dtos.CreateBucketDto
 	return &bucket, nil
 }
 
+func (impl *BucketService) List(ctx context.Context, page, pageSize int) ([]models.BucketFruits, error) {
+	offset := (page - 1) * pageSize
+
+	rows, err := impl.db.DB.Model(&models.Bucket{}).
+		Select(`buckets.id,
+				buckets.name,
+				buckets.capacity,
+				COUNT(fruits.id) AS total_fruits,
+				IFNULL(SUM(fruits.price), 0) AS total_price,
+				(COUNT(fruits.id) * 100 / buckets.capacity) AS percent`).
+		Joins(`LEFT JOIN fruits ON fruits.bucket_fk = buckets.id
+				AND fruits.deleted_at IS NULL
+				AND fruits.expires_at > ?`, _time.Now()).
+		Group("buckets.id").
+		Order("percent DESC, buckets.created_at").
+		Offset(offset).
+		Limit(pageSize).
+		Rows()
+
+	if err != nil {
+		impl.logger.Error(err.Error())
+		return nil, err
+	}
+	defer rows.Close()
+
+	bucketsFruits := make([]models.BucketFruits, 0)
+
+	for rows.Next() {
+		bucketFruits := models.BucketFruits{}
+		dest := []interface{}{
+			&bucketFruits.ID,
+			&bucketFruits.Name,
+			&bucketFruits.Capacity,
+			&bucketFruits.TotalFruits,
+			&bucketFruits.TotalPrice,
+			&bucketFruits.Percent,
+		}
+
+		if err := rows.Scan(dest...); err != nil {
+			impl.logger.Error(err.Error())
+			return nil, err
+		}
+
+		bucketsFruits = append(bucketsFruits, bucketFruits)
+	}
+
+	return bucketsFruits, nil
+}
+
 func (impl *BucketService) Delete(ctx context.Context, id int64) error {
 	now := _time.Now()
 	err := impl.db.DB.Transaction(func(tx *gorm.DB) error {
@@ -80,3 +129,5 @@ func (impl *BucketService) Delete(ctx context.Context, id int64) error {
 
 	return nil
 }
+
+// Refers: https://gorm.io/docs/scopes.html#Pagination

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/shopspring/decimal"
@@ -36,40 +37,133 @@ func TestApp(t *testing.T) {
 		factory, err := factories.Build(db, logger, validate)
 		require.Nil(t, err)
 
-		// defers
-		defer db.SQL.Exec("DELETE FROM fruits")
-		defer db.SQL.Exec("DELETE FROM buckets")
+		defer func() {
+			db.SQL.Exec("DELETE FROM fruits")
+			db.SQL.Exec("DELETE FROM buckets")
+		}()
 
 		// given
 		r := api.ConfigGin(config.Api.Host, config.Api.Port, logger, factory.HealthController, factory.BucketController, factory.FruitController)
 
-		createBucketReq := presenters.CreateBucketReq{
-			Name:     "Testing",
-			Capacity: 2,
-		}
-
-		price, _ := decimal.NewFromString("1.99")
-		createFruitReq := presenters.CreateFruitReq{
-			Name:      "Testing",
-			Price:     price,
-			ExpiresIn: "1h",
-		}
-
 		// cases
 		getHealth(t, r)
 
-		bucket := createBucket(t, r, createBucketReq)
-		fruit := createFruit(t, r, createFruitReq)
+		// case: create bucket
+		bucket := createBucket(t, r, presenters.CreateBucketReq{
+			Name:     "Medium fruits",
+			Capacity: 2,
+		}, http.StatusCreated,
+			&presenters.BucketRes{
+				Name:     "Medium fruits",
+				Capacity: 2,
+			})
 
-		addFruitOnBucket(t, r, fruit.ID, bucket.ID)
+		// case: create apple fruit expires in 1h out of the bucket
+		fruit := createFruit(t, r, presenters.CreateFruitReq{
+			Name:      "Apple",
+			Price:     decimal.NewFromFloat32(1.99),
+			ExpiresIn: "1h",
+		}, http.StatusCreated,
+			&presenters.FruitRes{
+				Name:  "Apple",
+				Price: decimal.NewFromFloat32(1.99),
+			})
 
-		createFruitReq.BucketID = &bucket.ID
-		fruit2 := createFruit(t, r, createFruitReq)
+		// case: add apple to the bucket
+		addFruitOnBucket(t, r, fruit.ID, bucket.ID, http.StatusOK)
 
-		removeFruitFromBucket(t, r, fruit.ID, bucket.ID)
+		// case: create melon fruit expires in 1s inside the bucket
+		createFruit(t, r, presenters.CreateFruitReq{
+			Name:      "Melon",
+			Price:     decimal.NewFromFloat32(3.50),
+			BucketID:  &bucket.ID,
+			ExpiresIn: "1s",
+		}, http.StatusCreated,
+			&presenters.FruitRes{
+				Name:     "Melon",
+				Price:    decimal.NewFromFloat32(3.50),
+				BucketID: &bucket.ID,
+			})
 
-		deleteFruit(t, r, fruit2.ID)
-		deleteBucket(t, r, bucket.ID)
+		// case: list buckets with all fruits
+		listBuckets(t, r, http.StatusOK, &presenters.BucketsFruitsRes{
+			Data: []presenters.BucketFruitsRes{
+				{
+					ID:          bucket.ID,
+					Name:        "Medium fruits",
+					Capacity:    2,
+					TotalFruits: 2,
+					TotalPrice:  decimal.NewFromFloat32(5.49),
+					Percent:     "100.00%",
+				},
+			},
+		})
+
+		// wait for melon expiration
+		time.Sleep(1 * time.Second)
+
+		// case: list buckets with one fruit
+		listBuckets(t, r, http.StatusOK, &presenters.BucketsFruitsRes{
+			Data: []presenters.BucketFruitsRes{
+				{
+					ID:          bucket.ID,
+					Name:        "Medium fruits",
+					Capacity:    2,
+					TotalFruits: 1,
+					TotalPrice:  decimal.NewFromFloat32(1.99),
+					Percent:     "50.00%",
+				},
+			},
+		})
+
+		// case: try remove bucket, but fail for it be full
+		deleteBucket(t, r, bucket.ID, http.StatusBadRequest)
+
+		// case: create abacato fruit expires in 1s inside the bucket
+		createFruit(t, r, presenters.CreateFruitReq{
+			Name:      "Abacato",
+			Price:     decimal.NewFromFloat32(7.50),
+			BucketID:  &bucket.ID,
+			ExpiresIn: "1s",
+		}, http.StatusCreated, &presenters.FruitRes{
+			Name:     "Abacato",
+			Price:    decimal.NewFromFloat32(7.50),
+			BucketID: &bucket.ID,
+		})
+
+		// case: try add another abacato to bucket, but fail for it be full
+		createFruit(t, r, presenters.CreateFruitReq{
+			Name:      "Abacato",
+			Price:     decimal.NewFromFloat32(7.50),
+			BucketID:  &bucket.ID,
+			ExpiresIn: "1s",
+		}, http.StatusBadRequest, nil)
+
+		// case: remove apple from bucket
+		removeFruitFromBucket(t, r, fruit.ID, bucket.ID, http.StatusOK)
+
+		// wait for abacato expiration
+		time.Sleep(1 * time.Second)
+
+		// case: list empty buckets
+		listBuckets(t, r, http.StatusOK, &presenters.BucketsFruitsRes{
+			Data: []presenters.BucketFruitsRes{
+				{
+					ID:          bucket.ID,
+					Name:        "Medium fruits",
+					Capacity:    2,
+					TotalFruits: 0,
+					TotalPrice:  decimal.NewFromInt32(0),
+					Percent:     "0.00%",
+				},
+			},
+		})
+
+		// case: delete apple from bucket
+		deleteFruit(t, r, fruit.ID, http.StatusOK)
+
+		// case: delete bucket
+		deleteBucket(t, r, bucket.ID, http.StatusOK)
 	})
 }
 
@@ -95,14 +189,8 @@ func getHealth(t *testing.T, r *gin.Engine) {
 	assert.Equal(t, wantBody, got)
 }
 
-func createBucket(t *testing.T, r *gin.Engine, data presenters.CreateBucketReq) presenters.BucketRes {
+func createBucket(t *testing.T, r *gin.Engine, data presenters.CreateBucketReq, wantCode int, wantBody *presenters.BucketRes) presenters.BucketRes {
 	// given
-	wantCode := http.StatusCreated
-	wantBody := presenters.BucketRes{
-		Name:     "Testing",
-		Capacity: 2,
-	}
-
 	body, _ := json.Marshal(data)
 
 	w := httptest.NewRecorder()
@@ -115,25 +203,21 @@ func createBucket(t *testing.T, r *gin.Engine, data presenters.CreateBucketReq) 
 
 	json.Unmarshal(w.Body.Bytes(), &got)
 
-	wantBody.ID = got.ID
-	wantBody.CreatedAt = got.CreatedAt
-
 	// then
 	assert.Equal(t, wantCode, w.Code)
-	assert.Equal(t, wantBody, got)
+
+	if wantBody != nil {
+		wantBody.ID = got.ID
+		wantBody.CreatedAt = got.CreatedAt
+
+		assert.Equal(t, *wantBody, got)
+	}
 
 	return got
 }
 
-func createFruit(t *testing.T, r *gin.Engine, data presenters.CreateFruitReq) presenters.FruitRes {
+func createFruit(t *testing.T, r *gin.Engine, data presenters.CreateFruitReq, wantCode int, wantBody *presenters.FruitRes) presenters.FruitRes {
 	// given
-	price, _ := decimal.NewFromString("1.99")
-	wantCode := http.StatusCreated
-	wantBody := presenters.FruitRes{
-		Name:  "Testing",
-		Price: price,
-	}
-
 	body, _ := json.Marshal(data)
 
 	w := httptest.NewRecorder()
@@ -146,22 +230,23 @@ func createFruit(t *testing.T, r *gin.Engine, data presenters.CreateFruitReq) pr
 
 	json.Unmarshal(w.Body.Bytes(), &got)
 
-	wantBody.ID = got.ID
-	wantBody.CreatedAt = got.CreatedAt
-	wantBody.ExpiresAt = got.ExpiresAt
-	wantBody.BucketID = got.BucketID
-
 	// then
 	assert.Equal(t, wantCode, w.Code)
-	assert.Equal(t, wantBody, got)
+
+	if wantBody != nil {
+		wantBody.ID = got.ID
+		wantBody.CreatedAt = got.CreatedAt
+		wantBody.ExpiresAt = got.ExpiresAt
+		wantBody.BucketID = got.BucketID
+
+		assert.Equal(t, *wantBody, got)
+	}
 
 	return got
 }
 
-func addFruitOnBucket(t *testing.T, r *gin.Engine, fruitID, bucketID int64) {
+func addFruitOnBucket(t *testing.T, r *gin.Engine, fruitID, bucketID int64, wantCode int) {
 	// given
-	wantCode := http.StatusOK
-
 	path := fmt.Sprintf("/api/v1/fruits/%d/buckets/%d", fruitID, bucketID)
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("POST", path, nil)
@@ -173,10 +258,8 @@ func addFruitOnBucket(t *testing.T, r *gin.Engine, fruitID, bucketID int64) {
 	assert.Equal(t, wantCode, w.Code)
 }
 
-func removeFruitFromBucket(t *testing.T, r *gin.Engine, fruitID, bucketID int64) {
+func removeFruitFromBucket(t *testing.T, r *gin.Engine, fruitID, bucketID int64, wantCode int) {
 	// given
-	wantCode := http.StatusOK
-
 	path := fmt.Sprintf("/api/v1/fruits/%d/buckets/%d", fruitID, bucketID)
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("DELETE", path, nil)
@@ -188,10 +271,8 @@ func removeFruitFromBucket(t *testing.T, r *gin.Engine, fruitID, bucketID int64)
 	assert.Equal(t, wantCode, w.Code)
 }
 
-func deleteFruit(t *testing.T, r *gin.Engine, fruitID int64) {
+func deleteFruit(t *testing.T, r *gin.Engine, fruitID int64, wantCode int) {
 	// given
-	wantCode := http.StatusOK
-
 	path := fmt.Sprintf("/api/v1/fruits/%d", fruitID)
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("DELETE", path, nil)
@@ -203,10 +284,8 @@ func deleteFruit(t *testing.T, r *gin.Engine, fruitID int64) {
 	assert.Equal(t, wantCode, w.Code)
 }
 
-func deleteBucket(t *testing.T, r *gin.Engine, bucketID int64) {
+func deleteBucket(t *testing.T, r *gin.Engine, bucketID int64, wantCode int) {
 	// given
-	wantCode := http.StatusOK
-
 	path := fmt.Sprintf("/api/v1/buckets/%d", bucketID)
 	w := httptest.NewRecorder()
 	req, _ := http.NewRequest("DELETE", path, nil)
@@ -216,6 +295,26 @@ func deleteBucket(t *testing.T, r *gin.Engine, bucketID int64) {
 
 	// then
 	assert.Equal(t, wantCode, w.Code)
+}
+
+func listBuckets(t *testing.T, r *gin.Engine, wantCode int, wantBody *presenters.BucketsFruitsRes) {
+	// given
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/buckets", nil)
+
+	var got presenters.BucketsFruitsRes
+
+	// when
+	r.ServeHTTP(w, req)
+
+	json.Unmarshal(w.Body.Bytes(), &got)
+
+	// then
+	assert.Equal(t, wantCode, w.Code)
+
+	if wantBody != nil {
+		assert.Equal(t, *wantBody, got)
+	}
 }
 
 // Refers: https://gin-gonic.com/docs/testing

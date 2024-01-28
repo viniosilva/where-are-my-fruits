@@ -93,6 +93,18 @@ func (mr *MockBucketControllerMockRecorder) Delete(ctx interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockBucketController)(nil).Delete), ctx)
 }
 
+// List mocks base method.
+func (m *MockBucketController) List(ctx *gin.Context) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "List", ctx)
+}
+
+// List indicates an expected call of List.
+func (mr *MockBucketControllerMockRecorder) List(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockBucketController)(nil).List), ctx)
+}
+
 // MockFruitController is a mock of FruitController interface.
 type MockFruitController struct {
 	ctrl     *gomock.Controller

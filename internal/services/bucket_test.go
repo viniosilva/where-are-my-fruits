@@ -9,6 +9,7 @@ import (
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/golang/mock/gomock"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/viniosilva/where-are-my-fruits/internal/dtos"
@@ -133,6 +134,120 @@ func TestBucketService_Create(t *testing.T) {
 
 			// when
 			got, err := service.Create(ctx, tt.data)
+
+			// then
+			assert.Equal(t, tt.want, got)
+			if err != nil || tt.wantErr != "" {
+				assert.EqualError(t, err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestBucketService_List(t *testing.T) {
+	now := time.Now()
+
+	tests := map[string]struct {
+		mock     func(db sqlmock.Sqlmock, logger *mocks.MockLogger, mTime *mocks.MockTime)
+		page     int
+		pageSize int
+		want     []models.BucketFruits
+		wantErr  string
+	}{
+		"shoulb be successful": {
+			mock: func(db sqlmock.Sqlmock, logger *mocks.MockLogger, mTime *mocks.MockTime) {
+				mTime.EXPECT().Now().Return(now)
+
+				rows := sqlmock.
+					NewRows([]string{"id", "name", "capacity", "total_fruits", "total_price", "percent"}).
+					AddRow(int64(1), "Testing", 4, int64(3), decimal.NewFromFloat32(16.32), decimal.NewFromInt32(75)).
+					AddRow(int64(2), "Testing_2", 3, int64(1), decimal.NewFromFloat32(6.25), decimal.NewFromFloat32(33.33))
+
+				db.ExpectQuery("SELECT").WillReturnRows(rows)
+			},
+			page:     1,
+			pageSize: 10,
+			want: []models.BucketFruits{
+				{
+					ID:          1,
+					Name:        "Testing",
+					Capacity:    4,
+					TotalFruits: 3,
+					TotalPrice:  decimal.NewFromFloat32(16.32),
+					Percent:     decimal.NewFromInt32(75),
+				},
+				{
+					ID:          2,
+					Name:        "Testing_2",
+					Capacity:    3,
+					TotalFruits: 1,
+					TotalPrice:  decimal.NewFromFloat32(6.25),
+					Percent:     decimal.NewFromFloat32(33.33),
+				},
+			},
+		},
+		"shoulb throw error when select": {
+			mock: func(db sqlmock.Sqlmock, logger *mocks.MockLogger, mTime *mocks.MockTime) {
+				mTime.EXPECT().Now().Return(now)
+
+				db.ExpectQuery("SELECT").WillReturnError(fmt.Errorf("error"))
+				logger.EXPECT().Error(gomock.Any())
+			},
+			page:     1,
+			pageSize: 10,
+			wantErr:  "error",
+		},
+		"shoulb throw error when scan": {
+			mock: func(db sqlmock.Sqlmock, logger *mocks.MockLogger, mTime *mocks.MockTime) {
+				mTime.EXPECT().Now().Return(now)
+
+				rows := sqlmock.
+					NewRows([]string{"id", "name", "capacity", "total_fruits", "total_price", "percent"}).
+					AddRow(int64(1), "Testing", 4, int64(3), decimal.NewFromFloat32(16.32), nil)
+
+				db.ExpectQuery("SELECT").WillReturnRows(rows)
+				logger.EXPECT().Error(gomock.Any())
+			},
+			page:     1,
+			pageSize: 10,
+			wantErr:  "sql: Scan error on column index 5, name \"percent\": could not convert value '<nil>' to byte array of type '<nil>'",
+		},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			//setup
+			ctx := context.Background()
+
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			db, sqlMock, err := sqlmock.New()
+			require.Nil(t, err)
+			defer db.Close()
+
+			dialector := mysql.New(mysql.Config{
+				DSN:                       "sqlmock_db_0",
+				DriverName:                "mysql",
+				Conn:                      db,
+				SkipInitializeWithVersion: true,
+			})
+
+			gormDB, err := gorm.Open(dialector, &gorm.Config{})
+			require.Nil(t, err)
+			database := &infra.Database{DB: gormDB, SQL: db}
+
+			loggerMock := mocks.NewMockLogger(ctrl)
+			validate := infra.NewValidator()
+			timeMock := mocks.NewMockTime(ctrl)
+			_time = timeMock
+
+			tt.mock(sqlMock, loggerMock, timeMock)
+
+			// given
+			service := NewBucket(database, loggerMock, validate)
+
+			// when
+			got, err := service.List(ctx, tt.page, tt.pageSize)
 
 			// then
 			assert.Equal(t, tt.want, got)
