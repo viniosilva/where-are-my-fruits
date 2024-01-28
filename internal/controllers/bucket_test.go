@@ -119,3 +119,82 @@ func TestBucketController_Create(t *testing.T) {
 		})
 	}
 }
+
+func TestBucketController_Delete(t *testing.T) {
+	tests := map[string]struct {
+		mock          func(service *mocks.MockBucketService)
+		bucketIDParam string
+		wantCode      int
+		wantBodyErr   presenters.ErrorRes
+	}{
+		"should be success": {
+			mock: func(service *mocks.MockBucketService) {
+				service.EXPECT().Delete(gomock.Any(), int64(1)).Return(nil)
+			},
+			bucketIDParam: "1",
+			wantCode:      http.StatusOK,
+		},
+		"should throw validation exception when bucketID is invalid": {
+			mock:          func(service *mocks.MockBucketService) {},
+			bucketIDParam: "invalid",
+			wantCode:      http.StatusBadRequest,
+			wantBodyErr: presenters.ErrorRes{
+				Error:   exceptions.ValidationExceptionName,
+				Message: "invalid fruitID",
+			},
+		},
+		"should throw forbidden exception when bucket is not empty": {
+			mock: func(service *mocks.MockBucketService) {
+				service.EXPECT().Delete(gomock.Any(), int64(1)).Return(exceptions.NewForbiddenException("Bucket is not empty"))
+			},
+			bucketIDParam: "1",
+			wantCode:      http.StatusBadRequest,
+			wantBodyErr: presenters.ErrorRes{
+				Error:   exceptions.ForbiddenExceptionName,
+				Message: "Bucket is not empty",
+			},
+		},
+		"should throw internal server error": {
+			mock: func(service *mocks.MockBucketService) {
+				service.EXPECT().Delete(gomock.Any(), gomock.Any()).Return(fmt.Errorf("error"))
+			},
+			bucketIDParam: "1",
+			wantCode:      http.StatusInternalServerError,
+			wantBodyErr:   presenters.ErrorRes{Error: http.StatusText(http.StatusInternalServerError)},
+		},
+	}
+	for name, tt := range tests {
+		t.Run(name, func(t *testing.T) {
+			// setup
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+			serviceMock := mocks.NewMockBucketService(ctrl)
+			tt.mock(serviceMock)
+
+			r := gin.Default()
+			controller := NewBucket(serviceMock)
+
+			r.DELETE("/api/v1/buckets/:bucketID", controller.Delete)
+
+			var gotErr presenters.ErrorRes
+
+			// given
+			path := fmt.Sprintf("/api/v1/buckets/%s", tt.bucketIDParam)
+			w := httptest.NewRecorder()
+			req, _ := http.NewRequest("DELETE", path, nil)
+
+			// when
+			r.ServeHTTP(w, req)
+
+			errBodyErr := json.Unmarshal(w.Body.Bytes(), &gotErr)
+
+			// then
+			assert.Equal(t, tt.wantCode, w.Code)
+
+			if errBodyErr != nil {
+				assert.Equal(t, tt.wantBodyErr, gotErr)
+				return
+			}
+		})
+	}
+}

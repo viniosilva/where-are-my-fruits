@@ -127,9 +127,9 @@ func (impl *FruitService) RemoveFromBucket(ctx context.Context, fruitID int64) e
 	return res.Error
 }
 
-func (impl *FruitService) Delete(ctx context.Context, fruitID int64) error {
+func (impl *FruitService) Delete(ctx context.Context, id int64) error {
 	res := impl.db.DB.Model(&models.Fruit{}).
-		Where("id = ?", fruitID).
+		Where("id = ? AND deleted_at IS NULL", id).
 		Update("deleted_at", _time.Now())
 
 	if err := res.Error; err != nil {
@@ -145,7 +145,7 @@ func (impl *FruitService) validateBucket(ctx context.Context, tx *gorm.DB, bucke
 
 	// Get bucket by ID
 	var bucket models.Bucket
-	res := tx.Where("id = ?", bucketID).First(&bucket)
+	res := tx.Where("id = ? AND deleted_at IS NULL", bucketID).First(&bucket)
 	err := res.Error
 	if err != nil && err.Error() == infra.MYSQL_ERROR_NOT_FOUND {
 		return exceptions.NewForeignNotFoundException("Bucket not found")

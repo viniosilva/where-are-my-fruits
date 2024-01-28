@@ -81,6 +81,18 @@ func (mr *MockBucketControllerMockRecorder) Create(ctx interface{}) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockBucketController)(nil).Create), ctx)
 }
 
+// Delete mocks base method.
+func (m *MockBucketController) Delete(ctx *gin.Context) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Delete", ctx)
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockBucketControllerMockRecorder) Delete(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockBucketController)(nil).Delete), ctx)
+}
+
 // MockFruitController is a mock of FruitController interface.
 type MockFruitController struct {
 	ctrl     *gomock.Controller

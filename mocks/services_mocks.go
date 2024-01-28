@@ -5,6 +5,7 @@
 package mocks
 
 import (
+	context "context"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
@@ -100,4 +101,64 @@ func (m *MockValidate) Struct(s interface{}) error {
 func (mr *MockValidateMockRecorder) Struct(s interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Struct", reflect.TypeOf((*MockValidate)(nil).Struct), s)
+}
+
+// MockDB is a mock of DB interface.
+type MockDB struct {
+	ctrl     *gomock.Controller
+	recorder *MockDBMockRecorder
+}
+
+// MockDBMockRecorder is the mock recorder for MockDB.
+type MockDBMockRecorder struct {
+	mock *MockDB
+}
+
+// NewMockDB creates a new mock instance.
+func NewMockDB(ctrl *gomock.Controller) *MockDB {
+	mock := &MockDB{ctrl: ctrl}
+	mock.recorder = &MockDBMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockDB) EXPECT() *MockDBMockRecorder {
+	return m.recorder
+}
+
+// MockSQL is a mock of SQL interface.
+type MockSQL struct {
+	ctrl     *gomock.Controller
+	recorder *MockSQLMockRecorder
+}
+
+// MockSQLMockRecorder is the mock recorder for MockSQL.
+type MockSQLMockRecorder struct {
+	mock *MockSQL
+}
+
+// NewMockSQL creates a new mock instance.
+func NewMockSQL(ctrl *gomock.Controller) *MockSQL {
+	mock := &MockSQL{ctrl: ctrl}
+	mock.recorder = &MockSQLMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockSQL) EXPECT() *MockSQLMockRecorder {
+	return m.recorder
+}
+
+// PingContext mocks base method.
+func (m *MockSQL) PingContext(ctx context.Context) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PingContext", ctx)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PingContext indicates an expected call of PingContext.
+func (mr *MockSQLMockRecorder) PingContext(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PingContext", reflect.TypeOf((*MockSQL)(nil).PingContext), ctx)
 }

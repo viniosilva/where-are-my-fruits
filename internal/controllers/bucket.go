@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -54,6 +55,38 @@ func (impl *BucketController) Create(ctx *gin.Context) {
 
 	ctx.JSON(http.StatusCreated, impl.parse(res))
 
+}
+
+// Fruit godoc
+// @Summary delete bucket
+// @Schemes
+// @Tags bucket
+// @Accept json
+// @Produce json
+// @Param bucketID path int64 true "Bucket ID"
+// @Success 200 {object} nil
+// @Failure 400 {object} presenters.ErrorRes
+// @Failure 500 {object} presenters.ErrorRes
+// @Router /v1/buckets/{bucketID} [delete]
+func (impl *BucketController) Delete(ctx *gin.Context) {
+	bucketID, err := strconv.ParseInt(ctx.Param("bucketID"), 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, presenters.ErrorRes{Error: exceptions.ValidationExceptionName, Message: "invalid bucketID"})
+		return
+	}
+
+	err = impl.service.Delete(ctx, bucketID)
+	if err != nil {
+		if e, ok := err.(*exceptions.ForbiddenException); ok {
+			ctx.JSON(http.StatusBadRequest, presenters.ErrorRes{Error: e.Name, Message: e.Error()})
+			return
+		}
+
+		ctx.JSON(http.StatusInternalServerError, presenters.ErrorRes{Error: http.StatusText(http.StatusInternalServerError)})
+		return
+	}
+
+	ctx.Status(http.StatusOK)
 }
 
 func (impl *BucketController) parse(bucket *models.Bucket) presenters.BucketRes {

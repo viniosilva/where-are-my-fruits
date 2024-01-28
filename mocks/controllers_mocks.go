@@ -88,6 +88,20 @@ func (mr *MockBucketServiceMockRecorder) Create(ctx, data interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockBucketService)(nil).Create), ctx, data)
 }
 
+// Delete mocks base method.
+func (m *MockBucketService) Delete(ctx context.Context, id int64) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", ctx, id)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockBucketServiceMockRecorder) Delete(ctx, id interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockBucketService)(nil).Delete), ctx, id)
+}
+
 // MockFruitService is a mock of FruitService interface.
 type MockFruitService struct {
 	ctrl     *gomock.Controller
@@ -141,17 +155,17 @@ func (mr *MockFruitServiceMockRecorder) Create(ctx, data interface{}) *gomock.Ca
 }
 
 // Delete mocks base method.
-func (m *MockFruitService) Delete(ctx context.Context, fruitID int64) error {
+func (m *MockFruitService) Delete(ctx context.Context, id int64) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Delete", ctx, fruitID)
+	ret := m.ctrl.Call(m, "Delete", ctx, id)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Delete indicates an expected call of Delete.
-func (mr *MockFruitServiceMockRecorder) Delete(ctx, fruitID interface{}) *gomock.Call {
+func (mr *MockFruitServiceMockRecorder) Delete(ctx, id interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockFruitService)(nil).Delete), ctx, fruitID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockFruitService)(nil).Delete), ctx, id)
 }
 
 // RemoveFromBucket mocks base method.

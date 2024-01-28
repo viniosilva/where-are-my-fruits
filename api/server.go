@@ -19,6 +19,7 @@ type HealthController interface {
 
 type BucketController interface {
 	Create(ctx *gin.Context)
+	Delete(ctx *gin.Context)
 }
 
 type FruitController interface {
@@ -48,6 +49,7 @@ func ConfigGin(host, port string, logger *zap.SugaredLogger, health HealthContro
 	r.GET("/api/healthcheck", health.Check)
 
 	r.POST("/api/v1/buckets", bucket.Create)
+	r.DELETE("/api/v1/buckets/:bucketID", bucket.Delete)
 
 	r.POST("/api/v1/fruits", fruit.Create)
 	r.POST("/api/v1/fruits/:fruitID/buckets/:bucketID", fruit.AddOnBucket)
