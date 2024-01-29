@@ -1,0 +1,26 @@
+@startuml
+!theme vibrant
+left to right direction
+
+class buckets {
+ bigint id
+ datetime created_at 
+ datetime deleted_at
+ string name
+ int capacity
+}
+
+
+class fruits {
+ bigint id
+ bigint bucket_fk
+ datetime created_at 
+ datetime deleted_at
+ string name
+ decimal price
+ datetime expires_at
+}
+
+buckets --> fruits : "0..*"
+
+@enduml

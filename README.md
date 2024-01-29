@@ -4,18 +4,11 @@ Gerenciamento de frutas em baldes conforme [desafio](./docs/desafio_backend_plan
 
 [> Quadro de planejamento](https://github.com/users/viniosilva/projects/1/views/2)
 
-## Arquitetura
-
-`[Desenho da arquitetura da base de dados aqui]`
-
 ## Requisitos
 
 Para executar a API é necessário instalar as seguintes ferramentas:
 
 - [go](https://tip.golang.org/doc/go1.20)
-- [mockgen](https://github.com/golang/mock)
-- [golang-migrate](https://github.com/golang-migrate/migrate/tree/master/cmd/migrate)
-- [swaggo](https://github.com/swaggo/swag)
 - [docker](https://www.docker.com/)
 - [docker-compose](https://docs.docker.com/compose/)
 - [gnu make](https://www.gnu.org/software/make/manual/make.html)
@@ -26,11 +19,14 @@ Para executar a API é necessário instalar as seguintes ferramentas:
 - [gorm](https://gorm.io)
 - [mysql](https://www.mysql.com)
 - [swagger](https://swagger.io)
+- [mockgen](https://github.com/golang/mock)
+- [golang-migrate](https://github.com/golang-migrate/migrate/tree/master/cmd/migrate)
+- [swaggo](https://github.com/swaggo/swag)
 
 ## Instalando
 
 ```bash
-$ go get
+$ make
 ```
 
 ## Configurando
@@ -39,10 +35,10 @@ $ go get
 
 ### Migração da base de dados
 
-Depois de rodar `docker-compose up -d`, é necessário esperar alguns segundos para rodar o `make db/migration` para a criação do schema do banco de dados MySQL.
+Depois de rodar `docker-compose up -d`, é necessário esperar alguns segundos até a subida completa da base de dados para rodar o `make db/migration` para a criação das tabelas do banco de dados MySQL.
 
 ```bash
-$ docker-compose up -d
+$ make infra/up
 $ make db/migration
 ```
 
@@ -69,13 +65,17 @@ $ make tests/e2e
 
 OBS: ao executar os testes E2E todas as tabelas do banco de dados Docker serão resetadas!
 
+## Diagrama de entidade-relacionamento
+
+![Diagrama da base de dados](./docs/database_diagram.png)
+
 ## Estrutura de pastas
 
 Estrutura de pastas conforme o [golang-standards](https://github.com/golang-standards/project-layout):
 
 - `/api`: arquivos de configuração APIRest
     - `/middlewares`: interceptação de requisiçoes
-    - `server`: configuração RestAPI e das rotas
+    - `server.go`: configuração RestAPI e das rotas
 - `/configs`: arquivos de configuração
 - `/docs`: documentações
 - `/internal`: código privado da aplicação
